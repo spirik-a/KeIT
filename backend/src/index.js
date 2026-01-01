@@ -1,17 +1,17 @@
-// ES-модули
 import express from "express";
+import bodyParser from "body-parser";
+import messagesRouter from "./routes/messages.js"; // <-- импортируем новый роут
 
 const app = express();
 const PORT = 3000;
 
-// Простейший роут
-app.get("/", (req, res) => {
-  res.send(
-    "Сервер работает, спирик!<br>Привет2!"
-  );
-});
+app.use(bodyParser.json());
 
-// Запуск сервера
+// подключаем роут
+app.use("/messages", messagesRouter);
+
 app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
+  console.log(
+    `Server running at http://localhost:${PORT}`
+  );
 });
