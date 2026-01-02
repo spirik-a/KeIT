@@ -14,3 +14,7 @@ yarn-error.log*
 # OS
 .DS_Store
 Thumbs.db
+
+# Windows system files
+Desktop.ini
+*.ico

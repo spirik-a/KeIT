@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <title>KeIT Test</title>
+  </head>
+  <body>
+    <input
+      id="msg"
+      placeholder="Введите сообщение"
+    />
+    <button onclick="send()">Отправить</button>
+
+    <pre id="out"></pre>
+
+    <script>
+      async function send() {
+        const text =
+          document.getElementById("msg").value;
+
+        await fetch("/messages", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            user: "Spirik",
+            text,
+          }),
+        });
+
+        const res = await fetch("/messages");
+        document.getElementById(
+          "out"
+        ).textContent = JSON.stringify(
+          await res.json(),
+          null,
+          2
+        );
+      }
+    </script>
+  </body>
+</html>
