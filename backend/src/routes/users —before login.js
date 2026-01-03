@@ -47,26 +47,3 @@ router.post("/register", (req, res) => {
 });
 
 export default router;
-
-//LOGIN
-router.post("/login", (req, res) => {
-  const { phone } = req.body;
-
-  if (!phone) {
-    return res
-      .status(400)
-      .json({ error: "Phone is required" });
-  }
-
-  const user = users.find(
-    (u) => u.phone === phone
-  );
-
-  if (!user) {
-    return res
-      .status(404)
-      .json({ error: "User not found" });
-  }
-
-  res.json(user);
-});
