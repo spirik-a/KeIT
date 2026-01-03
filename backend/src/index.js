@@ -1,25 +1,19 @@
 import express from "express";
-import bodyParser from "body-parser";
-import messagesRouter from "./routes/messages.js"; // <-- импортируем новый роут
+import usersRouter from "./routes/users.js";
 
 const app = express();
-const PORT = 3000;
 
-app.use(bodyParser.json());
-
-// подключаем роут
-app.use("/messages", messagesRouter);
-
-//подключаем статику
+app.use(express.json());
 app.use(express.static("src/public"));
-// функционал апи
-/*
+
+app.use("/users", usersRouter);
+
 app.get("/", (req, res) => {
   res.send("Сервер работает!");
 });
-*/
-app.listen(PORT, () => {
+
+app.listen(3000, () => {
   console.log(
-    `Server running at http://localhost:${PORT}`
+    "Server running on http://localhost:3000"
   );
 });

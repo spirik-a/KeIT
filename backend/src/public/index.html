@@ -12,6 +12,9 @@
     <button onclick="send()">Отправить</button>
 
     <pre id="out"></pre>
+    <button onclick="registerUser()">
+      Зарегистрировать пользователя
+    </button>
 
     <script>
       async function send() {
@@ -37,6 +40,40 @@
           null,
           2
         );
+      }
+      async function registerUser() {
+        const res = await fetch(
+          "/users/register",
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              phone: "+380991234567000000",
+              name: "Andrii",
+              username: "spirik",
+            }),
+          }
+        );
+
+        const text = await res.text();
+        console.log(
+          "REGISTER status:",
+          res.status
+        );
+        console.log("REGISTER raw:", text);
+
+        // если сервер вернул JSON — выведем красиво
+        try {
+          const data = JSON.parse(text);
+          console.log("REGISTER json:", data);
+          alert("OK: user created (см. Console)");
+        } catch {
+          alert(
+            "Ошибка. См. Console (REGISTER raw)."
+          );
+        }
       }
     </script>
   </body>
