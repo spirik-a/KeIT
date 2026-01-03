@@ -1,33 +1,37 @@
 import express from "express";
-import { randomUUID } from "crypto";
+import crypto from "crypto";
+import {
+  readJSON,
+  writeJSON,
+} from "../storage/db.js";
 
 const router = express.Router();
 
-// Временное хранилище (до persist)
-const users = [];
-const sessions = new Map(); // token -> userId
-
-// POST /users/register
+/* =========================
+   REGISTER
+========================= */
 router.post("/register", (req, res) => {
   const { phone, name, username } = req.body;
 
   if (!phone || !name || !username) {
     return res
       .status(400)
-      .json({ error: "Missing required fields" });
+      .json({ error: "Missing fields" });
   }
 
-  const existingUser = users.find(
+  const users = readJSON("users.json");
+
+  const exists = users.find(
     (u) => u.phone === phone
   );
-  if (existingUser) {
+  if (exists) {
     return res
       .status(409)
       .json({ error: "User already exists" });
   }
 
-  const newUser = {
-    id: randomUUID(),
+  const user = {
+    id: crypto.randomUUID(),
     phone,
     name,
     username,
@@ -36,97 +40,107 @@ router.post("/register", (req, res) => {
     createdAt: new Date().toISOString(),
   };
 
-  users.push(newUser);
-  return res.status(201).json(newUser);
+  users.push(user);
+  writeJSON("users.json", users);
+
+  res.json(user);
 });
 
-// POST /users/login
+/* =========================
+   LOGIN (SESSION)
+========================= */
 router.post("/login", (req, res) => {
   const { phone } = req.body;
 
   if (!phone) {
     return res
       .status(400)
-      .json({ error: "Phone is required" });
+      .json({ error: "Phone required" });
   }
 
+  const users = readJSON("users.json");
   const user = users.find(
     (u) => u.phone === phone
   );
+
   if (!user) {
     return res
       .status(404)
       .json({ error: "User not found" });
   }
 
-  const token = randomUUID();
-  sessions.set(token, user.id);
+  const sessions = readJSON("sessions.json");
 
-  return res.json({
-    token,
-    user: {
-      id: user.id,
-      phone: user.phone,
-      name: user.name,
-      username: user.username,
-      role: user.role,
-      balance: user.balance,
-    },
-  });
+  const session = {
+    token: crypto.randomUUID(),
+    userId: user.id,
+    createdAt: Date.now(),
+  };
+
+  sessions.push(session);
+  writeJSON("sessions.json", sessions);
+
+  res.json({ token: session.token, user });
 });
 
-// GET /users/me  (требует токен)
+/* =========================
+   ME (CURRENT USER)
+========================= */
 router.get("/me", (req, res) => {
-  const auth = req.headers.authorization || "";
-  const token = auth.startsWith("Bearer ")
-    ? auth.slice(7)
-    : null;
-
-  if (!token) {
+  const auth = req.headers.authorization;
+  if (!auth) {
     return res
       .status(401)
-      .json({ error: "Missing Bearer token" });
+      .json({ error: "No token" });
   }
 
-  const userId = sessions.get(token);
-  if (!userId) {
+  const token = auth.replace("Bearer ", "");
+
+  const sessions = readJSON("sessions.json");
+  const session = sessions.find(
+    (s) => s.token === token
+  );
+
+  if (!session) {
     return res
       .status(401)
-      .json({ error: "Invalid token" });
+      .json({ error: "Invalid session" });
   }
 
-  const user = users.find((u) => u.id === userId);
+  const users = readJSON("users.json");
+  const user = users.find(
+    (u) => u.id === session.userId
+  );
+
   if (!user) {
-    return res.status(401).json({
-      error: "User not found for token",
-    });
+    return res
+      .status(404)
+      .json({ error: "User not found" });
   }
 
-  return res.json({
-    id: user.id,
-    phone: user.phone,
-    name: user.name,
-    username: user.username,
-    role: user.role,
-    balance: user.balance,
-  });
+  res.json(user);
 });
 
-// POST /users/logout
+/* =========================
+   LOGOUT
+========================= */
 router.post("/logout", (req, res) => {
-  const auth = req.headers.authorization || "";
-  const token = auth.startsWith("Bearer ")
-    ? auth.slice(7)
-    : null;
-
-  if (!token) {
+  const auth = req.headers.authorization;
+  if (!auth) {
     return res
-      .status(401)
-      .json({ error: "Missing Bearer token" });
+      .status(400)
+      .json({ error: "No token" });
   }
 
-  sessions.delete(token);
-  return res.json({ ok: true });
+  const token = auth.replace("Bearer ", "");
+
+  let sessions = readJSON("sessions.json");
+  sessions = sessions.filter(
+    (s) => s.token !== token
+  );
+  writeJSON("sessions.json", sessions);
+
+  res.json({ ok: true });
 });
 
 export default router;
