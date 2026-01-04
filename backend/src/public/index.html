@@ -1,21 +1,48 @@
 <!DOCTYPE html>
-<html lang="ru">
+<html lang="uk">
   <head>
     <meta charset="UTF-8" />
-    <title>Login</title>
+    <title>Вхід</title>
     <link rel="stylesheet" href="style.css" />
   </head>
   <body>
-    <h2>Вход</h2>
+    <h2>Вхід до облікового запису</h2>
 
-    <input id="phone" placeholder="Телефон" />
-    <button onclick="login()">Войти</button>
+    <input
+      id="phone"
+      placeholder="Номер телефону"
+    /><br /><br />
+
+    <input
+      id="password"
+      type="password"
+      placeholder="Пароль"
+    /><br />
+
+    <label>
+      <input
+        type="checkbox"
+        onclick="togglePassword('password')"
+      />
+      Показати пароль </label
+    ><br /><br />
+
+    <button onclick="login()">Увійти</button>
 
     <p>
-      Нет аккаунта?
-      <a href="register.html">Регистрация</a>
+      Немає облікового запису?
+      <a href="register.html">Зареєструватися</a>
     </p>
 
     <script src="auth.js"></script>
+    <script>
+      function togglePassword(id) {
+        const input = document.getElementById(id);
+        input.type =
+          input.type === "password"
+            ? "text"
+            : "password";
+      }
+    </script>
   </body>
 </html>

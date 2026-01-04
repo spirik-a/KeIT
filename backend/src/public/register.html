@@ -1,32 +1,63 @@
 <!DOCTYPE html>
-<html lang="ru">
+<html lang="uk">
   <head>
     <meta charset="UTF-8" />
-    <title>Register</title>
+    <title>Реєстрація</title>
     <link rel="stylesheet" href="style.css" />
   </head>
   <body>
-    <h2>Регистрация</h2>
+    <h2>Реєстрація користувача</h2>
 
     <input
       id="phone"
-      placeholder="Телефон"
-    /><br />
-    <input id="name" placeholder="Имя" /><br />
+      placeholder="Номер телефону"
+    /><br /><br />
+    <input
+      id="name"
+      placeholder="Імʼя"
+    /><br /><br />
     <input
       id="username"
-      placeholder="Ник"
+      placeholder="Нікнейм"
+    /><br /><br />
+
+    <input
+      id="password"
+      type="password"
+      placeholder="Пароль"
     /><br />
 
+    <label>
+      <input
+        type="checkbox"
+        onclick="togglePassword('password')"
+      />
+      Показати пароль </label
+    ><br /><br />
+
+    <small>
+      Пароль має містити мінімум 8 символів,
+      великі й малі літери, цифру та спецсимвол </small
+    ><br /><br />
+
     <button onclick="register()">
-      Зарегистрироваться
+      Зареєструватися
     </button>
 
     <p>
-      Уже есть аккаунт?
-      <a href="index.html">Войти</a>
+      Вже маєш акаунт?
+      <a href="index.html">Увійти</a>
     </p>
 
     <script src="auth.js"></script>
+    <script>
+      function togglePassword(id) {
+        const input = document.getElementById(id);
+        input.type =
+          input.type === "password"
+            ? "text"
+            : "password";
+      }
+    </script>
   </body>
 </html>

@@ -1,33 +1,79 @@
 import express from "express";
+import fs from "fs";
+import path from "path";
 import crypto from "crypto";
-import {
-  readJSON,
-  writeJSON,
-} from "../storage/db.js";
 
 const router = express.Router();
 
-/* =========================
-   REGISTER
-========================= */
-router.post("/register", (req, res) => {
-  const { phone, name, username } = req.body;
+// Використовуємо storage (як у твоєму persist раніше)
+const storageDir = path.resolve("src/storage");
+const usersPath = path.join(
+  storageDir,
+  "users.json"
+);
+const sessionsPath = path.join(
+  storageDir,
+  "sessions.json"
+);
 
-  if (!phone || !name || !username) {
+/* ===== ensure storage exists ===== */
+function ensureStorage() {
+  if (!fs.existsSync(storageDir)) {
+    fs.mkdirSync(storageDir, { recursive: true });
+  }
+  if (!fs.existsSync(usersPath)) {
+    fs.writeFileSync(usersPath, "[]", "utf-8");
+  }
+  if (!fs.existsSync(sessionsPath)) {
+    fs.writeFileSync(sessionsPath, "[]", "utf-8");
+  }
+}
+
+function readJSON(file) {
+  ensureStorage();
+  const raw = fs.readFileSync(file, "utf-8");
+  return JSON.parse(raw);
+}
+
+function writeJSON(file, data) {
+  ensureStorage();
+  fs.writeFileSync(
+    file,
+    JSON.stringify(data, null, 2),
+    "utf-8"
+  );
+}
+
+function nowHuman() {
+  // "YYYY-MM-DD HH:MM:SS"
+  return new Date()
+    .toISOString()
+    .replace("T", " ")
+    .substring(0, 19);
+}
+
+/* ===== REGISTER ===== */
+router.post("/register", (req, res) => {
+  const { phone, name, username, password } =
+    req.body;
+
+  if (!phone || !name || !username || !password) {
     return res
       .status(400)
-      .json({ error: "Missing fields" });
+      .json({ error: "Не всі поля заповнені" });
   }
 
-  const users = readJSON("users.json");
+  const users = readJSON(usersPath);
 
   const exists = users.find(
-    (u) => u.phone === phone
+    (u) =>
+      u.phone === phone || u.username === username
   );
+
   if (exists) {
     return res
       .status(409)
-      .json({ error: "User already exists" });
+      .json({ error: "Користувач вже існує" });
   }
 
   const user = {
@@ -35,68 +81,88 @@ router.post("/register", (req, res) => {
     phone,
     name,
     username,
+    password, // зберігаємо (наступним кроком замінимо на hash)
     role: "basic",
     balance: 0,
-    createdAt: new Date().toISOString(),
+    createdAt: nowHuman(),
   };
 
   users.push(user);
-  writeJSON("users.json", users);
+  writeJSON(usersPath, users);
 
-  res.json(user);
+  // пароль не повертаємо на фронт
+  return res.status(201).json({
+    id: user.id,
+    phone: user.phone,
+    name: user.name,
+    username: user.username,
+    role: user.role,
+    balance: user.balance,
+  });
 });
 
-/* =========================
-   LOGIN (SESSION)
-========================= */
+/* ===== LOGIN ===== */
 router.post("/login", (req, res) => {
-  const { phone } = req.body;
+  const { phone, password } = req.body;
 
-  if (!phone) {
-    return res
-      .status(400)
-      .json({ error: "Phone required" });
+  if (!phone || !password) {
+    return res.status(400).json({
+      error: "Введи номер телефону та пароль",
+    });
   }
 
-  const users = readJSON("users.json");
+  const users = readJSON(usersPath);
   const user = users.find(
-    (u) => u.phone === phone
+    (u) =>
+      u.phone === phone && u.password === password
   );
 
   if (!user) {
-    return res
-      .status(404)
-      .json({ error: "User not found" });
+    return res.status(404).json({
+      error: "Невірний телефон або пароль",
+    });
   }
 
-  const sessions = readJSON("sessions.json");
+  const token = crypto.randomUUID();
 
-  const session = {
-    token: crypto.randomUUID(),
+  const sessions = readJSON(sessionsPath);
+  sessions.push({
+    token,
     userId: user.id,
-    createdAt: Date.now(),
-  };
+    username: user.username,
+    createdAt: nowHuman(),
+    createdAtISO: new Date().toISOString(),
+  });
 
-  sessions.push(session);
-  writeJSON("sessions.json", sessions);
+  writeJSON(sessionsPath, sessions);
 
-  res.json({ token: session.token, user });
+  return res.json({
+    token,
+    user: {
+      id: user.id,
+      phone: user.phone,
+      name: user.name,
+      username: user.username,
+      role: user.role,
+      balance: user.balance,
+    },
+  });
 });
 
-/* =========================
-   ME (CURRENT USER)
-========================= */
+/* ===== ME ===== */
 router.get("/me", (req, res) => {
-  const auth = req.headers.authorization;
-  if (!auth) {
+  const auth = req.headers.authorization || "";
+  const token = auth.startsWith("Bearer ")
+    ? auth.slice(7)
+    : null;
+
+  if (!token) {
     return res
       .status(401)
-      .json({ error: "No token" });
+      .json({ error: "Відсутній токен" });
   }
 
-  const token = auth.replace("Bearer ", "");
-
-  const sessions = readJSON("sessions.json");
+  const sessions = readJSON(sessionsPath);
   const session = sessions.find(
     (s) => s.token === token
   );
@@ -104,10 +170,10 @@ router.get("/me", (req, res) => {
   if (!session) {
     return res
       .status(401)
-      .json({ error: "Invalid session" });
+      .json({ error: "Недійсна сесія" });
   }
 
-  const users = readJSON("users.json");
+  const users = readJSON(usersPath);
   const user = users.find(
     (u) => u.id === session.userId
   );
@@ -115,32 +181,39 @@ router.get("/me", (req, res) => {
   if (!user) {
     return res
       .status(404)
-      .json({ error: "User not found" });
+      .json({ error: "Користувача не знайдено" });
   }
 
-  res.json(user);
+  return res.json({
+    id: user.id,
+    phone: user.phone,
+    name: user.name,
+    username: user.username,
+    role: user.role,
+    balance: user.balance,
+  });
 });
 
-/* =========================
-   LOGOUT
-========================= */
+/* ===== LOGOUT ===== */
 router.post("/logout", (req, res) => {
-  const auth = req.headers.authorization;
-  if (!auth) {
+  const auth = req.headers.authorization || "";
+  const token = auth.startsWith("Bearer ")
+    ? auth.slice(7)
+    : null;
+
+  if (!token) {
     return res
       .status(400)
-      .json({ error: "No token" });
+      .json({ error: "Відсутній токен" });
   }
 
-  const token = auth.replace("Bearer ", "");
-
-  let sessions = readJSON("sessions.json");
+  let sessions = readJSON(sessionsPath);
   sessions = sessions.filter(
     (s) => s.token !== token
   );
-  writeJSON("sessions.json", sessions);
+  writeJSON(sessionsPath, sessions);
 
-  res.json({ ok: true });
+  return res.json({ ok: true });
 });
 
 export default router;

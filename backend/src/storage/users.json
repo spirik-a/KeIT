@@ -7,5 +7,42 @@
     "role": "basic",
     "balance": 0,
     "createdAt": "2026-01-03T17:56:12.214Z"
+  },
+  {
+    "id": "e703f1de-c78f-414b-b72e-42af517954cf",
+    "phone": "+380991234567000000",
+    "name": "Andrii",
+    "username": "spirik",
+    "role": "basic",
+    "balance": 0,
+    "createdAt": "2026-01-04T11:20:19.673Z"
+  },
+  {
+    "id": "59101cb9-2261-4fa8-b12f-36760edc5b1f",
+    "phone": "0972384845",
+    "name": "Oksana",
+    "username": "MOM",
+    "role": "basic",
+    "balance": 0,
+    "createdAt": "2026-01-04T12:16:51.622Z"
+  },
+  {
+    "id": "3e5983ce-f60d-41e1-8223-a07d6d336934",
+    "phone": "0674560206",
+    "name": "SOMEONE",
+    "username": "UNK",
+    "role": "basic",
+    "balance": 0,
+    "createdAt": "2026-01-04T16:03:54.792Z"
+  },
+  {
+    "id": "3c5721ca-a702-4d05-a900-8b0fd0f561ad",
+    "phone": "0930649826",
+    "name": "ANDREW",
+    "username": "SPIRIK",
+    "password": "4560206okBG#",
+    "role": "basic",
+    "balance": 0,
+    "createdAt": "2026-01-04 17:44:53"
   }
 ]

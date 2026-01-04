@@ -1,3 +1,5 @@
+import protectedRouter from "./routes/protected.js";
+
 import express from "express";
 import path from "path";
 import { fileURLToPath } from "url";
@@ -30,3 +32,5 @@ app.listen(PORT, () => {
     `Server running on http://localhost:${PORT}`
   );
 });
+
+app.use("/protected", protectedRouter);
