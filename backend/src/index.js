@@ -1,19 +1,32 @@
 import express from "express";
+import path from "path";
+import { fileURLToPath } from "url";
+
 import usersRouter from "./routes/users.js";
 
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
 const app = express();
+const PORT = 3000;
 
 app.use(express.json());
-app.use(express.static("src/public"));
 
+// статика (frontend)
+app.use(
+  express.static(path.join(__dirname, "public"))
+);
+
+// API routes
 app.use("/users", usersRouter);
 
-app.get("/", (req, res) => {
-  res.send("Сервер работает!");
+// (опционально) быстрый healthcheck
+app.get("/health", (req, res) => {
+  res.json({ ok: true });
 });
 
-app.listen(3000, () => {
+app.listen(PORT, () => {
   console.log(
-    "Server running on http://localhost:3000"
+    `Server running on http://localhost:${PORT}`
   );
 });

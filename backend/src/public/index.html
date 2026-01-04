@@ -2,79 +2,20 @@
 <html lang="ru">
   <head>
     <meta charset="UTF-8" />
-    <title>KeIT Test</title>
+    <title>Login</title>
+    <link rel="stylesheet" href="style.css" />
   </head>
   <body>
-    <input
-      id="msg"
-      placeholder="Введите сообщение"
-    />
-    <button onclick="send()">Отправить</button>
+    <h2>Вход</h2>
 
-    <pre id="out"></pre>
-    <button onclick="registerUser()">
-      Зарегистрировать пользователя
-    </button>
+    <input id="phone" placeholder="Телефон" />
+    <button onclick="login()">Войти</button>
 
-    <script>
-      async function send() {
-        const text =
-          document.getElementById("msg").value;
+    <p>
+      Нет аккаунта?
+      <a href="register.html">Регистрация</a>
+    </p>
 
-        await fetch("/messages", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            user: "Spirik",
-            text,
-          }),
-        });
-
-        const res = await fetch("/messages");
-        document.getElementById(
-          "out"
-        ).textContent = JSON.stringify(
-          await res.json(),
-          null,
-          2
-        );
-      }
-      async function registerUser() {
-        const res = await fetch(
-          "/users/register",
-          {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-              phone: "+380991234567000000",
-              name: "Andrii",
-              username: "spirik",
-            }),
-          }
-        );
-
-        const text = await res.text();
-        console.log(
-          "REGISTER status:",
-          res.status
-        );
-        console.log("REGISTER raw:", text);
-
-        // если сервер вернул JSON — выведем красиво
-        try {
-          const data = JSON.parse(text);
-          console.log("REGISTER json:", data);
-          alert("OK: user created (см. Console)");
-        } catch {
-          alert(
-            "Ошибка. См. Console (REGISTER raw)."
-          );
-        }
-      }
-    </script>
+    <script src="auth.js"></script>
   </body>
 </html>
