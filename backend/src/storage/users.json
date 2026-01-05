@@ -44,5 +44,15 @@
     "role": "improved",
     "balance": 50,
     "createdAt": "2026-01-04 17:44:53"
+  },
+  {
+    "id": "5295b9dd-702f-4c1c-b862-c2390d06353b",
+    "phone": "999999999999999999999",
+    "name": "CHECKER",
+    "username": "tst",
+    "password": "123456789asdfJKL:#",
+    "role": "improved",
+    "balance": 50,
+    "createdAt": "2026-01-05 16:49:37"
   }
 ]

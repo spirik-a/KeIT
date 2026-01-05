@@ -39,5 +39,19 @@
     "username": "SPIRIK",
     "createdAt": "2026-01-05 16:12:16",
     "createdAtISO": "2026-01-05T16:12:16.477Z"
+  },
+  {
+    "token": "ec59e808-62b2-42fc-b953-1a0753c0e2c3",
+    "userId": "5295b9dd-702f-4c1c-b862-c2390d06353b",
+    "username": "tst",
+    "createdAt": "2026-01-05 16:50:02",
+    "createdAtISO": "2026-01-05T16:50:02.068Z"
+  },
+  {
+    "token": "1511a021-54cc-40a2-a5a4-c62c0edb1cb6",
+    "userId": "5295b9dd-702f-4c1c-b862-c2390d06353b",
+    "username": "tst",
+    "createdAt": "2026-01-05 16:51:53",
+    "createdAtISO": "2026-01-05T16:51:53.154Z"
   }
 ]
