@@ -1,3 +1,7 @@
+import upgradeRouter from "./routes/upgrade.js";
+
+import balanceRouter from "./routes/balance.js";
+
 import protectedRouter from "./routes/protected.js";
 
 import express from "express";
@@ -34,3 +38,7 @@ app.listen(PORT, () => {
 });
 
 app.use("/protected", protectedRouter);
+
+app.use("/balance", balanceRouter);
+
+app.use("/upgrade", upgradeRouter);
