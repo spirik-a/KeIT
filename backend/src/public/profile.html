@@ -1,17 +1,22 @@
-<!DOCTYPE html>
-<html lang="uk">
-  <head>
-    <meta charset="UTF-8" />
-    <title>Профіль</title>
-    <link rel="stylesheet" href="style.css" />
-  </head>
-  <body>
-    <h2>Профіль користувача</h2>
+<h2>Профіль користувача</h2>
 
-    <pre id="profile"></pre>
+<div id="profile"></div>
 
-    <button onclick="logout()">Вийти</button>
+<hr />
 
-    <script src="auth.js"></script>
-  </body>
-</html>
+<div id="upgrade-block" style="display: none">
+  <p>Вартість Improved: <b>50</b></p>
+  <button id="upgradeBtn">
+    Отримати Improved
+  </button>
+</div>
+
+<hr />
+
+<div id="improved-block" style="display: none">
+  <h3>Improved-функції</h3>
+  <p>Відеозвʼязок (скоро)</p>
+  <p>Розширені можливості чату</p>
+</div>
+
+<script src="profile.js"></script>
