@@ -1,83 +1,78 @@
 import express from "express";
-import fs from "fs";
+import { readFileSync, writeFileSync } from "fs";
+import { v4 as uuid } from "uuid";
 import path from "path";
-import crypto from "crypto";
-import { requireAuth } from "../middleware/requireAuth.js";
+import { fileURLToPath } from "url";
+import { authMiddleware } from "../middleware/auth.js";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const router = express.Router();
-
-const storageDir = path.resolve("src/storage");
-const messagesPath = path.join(
-  storageDir,
-  "messages.json"
+const filePath = path.join(
+  __dirname,
+  "../storage/messages.json"
 );
 
-function ensureStorage() {
-  if (!fs.existsSync(storageDir))
-    fs.mkdirSync(storageDir, { recursive: true });
-  if (!fs.existsSync(messagesPath))
-    fs.writeFileSync(messagesPath, "[]", "utf-8");
-}
+const readMessages = () =>
+  JSON.parse(readFileSync(filePath, "utf-8"));
 
-function readMessages() {
-  ensureStorage();
-  return JSON.parse(
-    fs.readFileSync(messagesPath, "utf-8")
-  );
-}
-
-function writeMessages(messages) {
-  ensureStorage();
-  fs.writeFileSync(
-    messagesPath,
-    JSON.stringify(messages, null, 2),
+const writeMessages = (data) =>
+  writeFileSync(
+    filePath,
+    JSON.stringify(data, null, 2),
     "utf-8"
   );
-}
 
-/* GET /messages/dialog/:userId - отримати діалог */
+/**
+ * GET /messages/:userId
+ * отримати діалог з конкретним користувачем
+ */
 router.get(
-  "/dialog/:userId",
-  requireAuth,
+  "/:userId",
+  authMiddleware,
   (req, res) => {
-    const otherUserId = req.params.userId;
-    const me = req.user.id;
+    const messages = readMessages();
+    const myId = req.user.id;
+    const otherId = req.params.userId;
 
-    const messages = readMessages().filter(
+    const dialog = messages.filter(
       (m) =>
-        (m.from === me && m.to === otherUserId) ||
-        (m.from === otherUserId && m.to === me)
+        (m.from === myId && m.to === otherId) ||
+        (m.from === otherId && m.to === myId)
     );
 
-    res.json(messages);
+    res.json(dialog);
   }
 );
 
-/* POST /messages/send - надіслати повідомлення */
-router.post("/send", requireAuth, (req, res) => {
+/**
+ * POST /messages
+ * відправити повідомлення
+ */
+router.post("/", authMiddleware, (req, res) => {
   const { to, text } = req.body;
-  const from = req.user.id;
 
-  if (!to || !text || !String(text).trim()) {
+  if (!to || !text) {
     return res
       .status(400)
-      .json({ error: "Порожнє повідомлення" });
+      .json({ error: "Missing data" });
   }
 
   const messages = readMessages();
 
-  const msg = {
-    id: crypto.randomUUID(),
-    from,
+  const message = {
+    id: uuid(),
+    from: req.user.id,
     to,
-    text: String(text).trim(),
+    text,
     createdAt: new Date().toISOString(),
   };
 
-  messages.push(msg);
+  messages.push(message);
   writeMessages(messages);
 
-  res.status(201).json(msg);
+  res.json(message);
 });
 
 export default router;

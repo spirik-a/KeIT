@@ -67,5 +67,12 @@
     "username": "SPIRIK",
     "createdAt": "2026-01-05 18:14:09",
     "createdAtISO": "2026-01-05T18:14:09.730Z"
+  },
+  {
+    "token": "8eee447d-ba1a-4b0a-9162-e8728dbb52fc",
+    "userId": "3c5721ca-a702-4d05-a900-8b0fd0f561ad",
+    "username": "SPIRIK",
+    "createdAt": "2026-01-05 18:31:44",
+    "createdAtISO": "2026-01-05T18:31:44.859Z"
   }
 ]

@@ -1,5 +1,6 @@
-import contactsRouter from "./routes/contacts.js";
 import messagesRouter from "./routes/messages.js";
+
+import contactsRouter from "./routes/contacts.js";
 
 import upgradeRouter from "./routes/upgrade.js";
 
@@ -47,4 +48,6 @@ app.use("/balance", balanceRouter);
 app.use("/upgrade", upgradeRouter);
 
 app.use("/contacts", contactsRouter);
+app.use("/messages", messagesRouter);
+
 app.use("/messages", messagesRouter);
