@@ -1,38 +1,38 @@
-import messagesRouter from "./routes/messages.js";
-
-import contactsRouter from "./routes/contacts.js";
-
-import upgradeRouter from "./routes/upgrade.js";
-
-import balanceRouter from "./routes/balance.js";
-
-import protectedRouter from "./routes/protected.js";
-
 import express from "express";
 import path from "path";
 import { fileURLToPath } from "url";
 
 import usersRouter from "./routes/users.js";
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+import contactsRouter from "./routes/contacts.js";
+import messagesRouter from "./routes/messages.js";
 
 const app = express();
 const PORT = 3000;
 
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
 app.use(express.json());
 
-// статика (frontend)
+/* API */
+app.use("/users", usersRouter);
+app.use("/contacts", contactsRouter);
+app.use("/messages", messagesRouter);
+
+/* FRONTEND */
 app.use(
-  express.static(path.join(__dirname, "public"))
+  express.static(
+    path.join(__dirname, "../../frontend")
+  )
 );
 
-// API routes
-app.use("/users", usersRouter);
-
-// (опционально) быстрый healthcheck
-app.get("/health", (req, res) => {
-  res.json({ ok: true });
+app.get("/", (req, res) => {
+  res.sendFile(
+    path.join(
+      __dirname,
+      "../../frontend/index.html"
+    )
+  );
 });
 
 app.listen(PORT, () => {
@@ -40,14 +40,3 @@ app.listen(PORT, () => {
     `Server running on http://localhost:${PORT}`
   );
 });
-
-app.use("/protected", protectedRouter);
-
-app.use("/balance", balanceRouter);
-
-app.use("/upgrade", upgradeRouter);
-
-app.use("/contacts", contactsRouter);
-app.use("/messages", messagesRouter);
-
-app.use("/messages", messagesRouter);
