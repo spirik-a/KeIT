@@ -1,0 +1,59 @@
+body {
+  margin: 0;
+  font-family: Arial, sans-serif;
+  background: #020617;
+  color: #e5e7eb;
+}
+
+.app {
+  display: flex;
+  height: 100vh;
+}
+
+.contacts {
+  width: 250px;
+  border-right: 1px solid #334155;
+  padding: 10px;
+}
+
+.contacts li {
+  list-style: none;
+  padding: 8px;
+  cursor: pointer;
+}
+
+.contacts li:hover {
+  background: #1e293b;
+}
+
+.chat {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+#messages {
+  flex: 1;
+  padding: 10px;
+  overflow-y: auto;
+}
+
+form {
+  display: flex;
+  border-top: 1px solid #334155;
+}
+
+form input {
+  flex: 1;
+  padding: 10px;
+  background: #020617;
+  color: white;
+  border: none;
+}
+
+form button {
+  padding: 10px;
+  background: #2563eb;
+  color: white;
+  border: none;
+}
