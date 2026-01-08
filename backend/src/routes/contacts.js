@@ -1,103 +1,74 @@
 import express from "express";
 import fs from "fs";
 import path from "path";
-import crypto from "crypto";
-import { requireAuth } from "../middleware/requireAuth.js";
+import { fileURLToPath } from "url";
 
 const router = express.Router();
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
-const storageDir = path.resolve("src/storage");
-const contactsPath = path.join(
-  storageDir,
-  "contacts.json"
+const CONTACTS_FILE = path.join(
+  __dirname,
+  "../storage/contacts.json"
 );
 
-function ensureStorage() {
-  if (!fs.existsSync(storageDir))
-    fs.mkdirSync(storageDir, { recursive: true });
-  if (!fs.existsSync(contactsPath))
-    fs.writeFileSync(contactsPath, "[]", "utf-8");
-}
-
 function readContacts() {
-  ensureStorage();
   return JSON.parse(
-    fs.readFileSync(contactsPath, "utf-8")
+    fs.readFileSync(CONTACTS_FILE, "utf-8")
   );
 }
 
 function writeContacts(data) {
-  ensureStorage();
   fs.writeFileSync(
-    contactsPath,
-    JSON.stringify(data, null, 2),
-    "utf-8"
+    CONTACTS_FILE,
+    JSON.stringify(data, null, 2)
   );
 }
 
-router.get("/", requireAuth, (req, res) => {
+// отримати контакти користувача
+router.get("/", (req, res) => {
+  const userId = req.user.id;
   const contacts = readContacts().filter(
-    (c) => c.ownerId === req.user.id
+    (c) => c.ownerId === userId
   );
   res.json(contacts);
 });
 
-router.post("/add", requireAuth, (req, res) => {
-  const { username } = req.body;
-  if (!username) {
-    return res.status(400).json({
-      error: "Не вказано нік користувача",
-    });
-  }
+// додати контакт
+router.post("/", (req, res) => {
+  const { contactUserId, name } = req.body;
+  const userId = req.user.id;
 
-  const usersPath = path.join(
-    storageDir,
-    "users.json"
-  );
-  const users = JSON.parse(
-    fs.readFileSync(usersPath, "utf-8")
-  );
-  const user = users.find(
-    (u) => u.username === username
-  );
-
-  if (!user) {
-    return res
-      .status(404)
-      .json({ error: "Користувача не знайдено" });
-  }
-
-  if (user.id === req.user.id) {
+  if (!contactUserId || !name) {
     return res
       .status(400)
-      .json({ error: "Не можна додати себе" });
+      .json({ error: "Missing data" });
   }
 
   const contacts = readContacts();
+
   const exists = contacts.find(
     (c) =>
-      c.ownerId === req.user.id &&
-      c.contactUserId === user.id
+      c.ownerId === userId &&
+      c.contactUserId === contactUserId
   );
-
   if (exists) {
     return res
       .status(409)
-      .json({ error: "Контакт вже існує" });
+      .json({ error: "Contact already exists" });
   }
 
-  const contact = {
+  const newContact = {
     id: crypto.randomUUID(),
-    ownerId: req.user.id,
-    contactUserId: user.id,
-    contactUsername: user.username,
-    createdAt: new Date().toISOString(),
+    ownerId: userId,
+    contactUserId,
+    name,
   };
 
-  contacts.push(contact);
+  contacts.push(newContact);
   writeContacts(contacts);
 
-  res.status(201).json(contact);
+  res.json(newContact);
 });
 
 export default router;

@@ -2,27 +2,33 @@
 <html lang="uk">
   <head>
     <meta charset="UTF-8" />
-    <title>Месенджер</title>
+    <title>KeIT Messenger</title>
     <link rel="stylesheet" href="messenger.css" />
   </head>
   <body>
     <div class="app">
-      <aside class="contacts">
-        <h3>Контакти</h3>
+      <!-- Sidebar / Contacts -->
+      <div class="sidebar">
+        <h2>Контакти</h2>
         <ul id="contacts"></ul>
-      </aside>
+      </div>
 
-      <main class="chat">
-        <div id="messages"></div>
+      <!-- Chat -->
+      <div class="chat">
+        <div id="chatHeader" class="chat-header">
+          Оберіть контакт
+        </div>
 
-        <form id="form">
+        <div id="messages" class="messages"></div>
+
+        <div class="chat-input">
           <input
-            id="text"
-            placeholder="Введіть повідомлення..."
+            id="messageInput"
+            placeholder="Введіть повідомлення…"
           />
-          <button>➤</button>
-        </form>
-      </main>
+          <button id="sendBtn">Надіслати</button>
+        </div>
+      </div>
     </div>
 
     <script src="messenger.js"></script>

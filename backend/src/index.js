@@ -40,3 +40,16 @@ app.listen(PORT, () => {
     `Server running on http://localhost:${PORT}`
   );
 });
+
+/*app.use(
+  "/contacts",
+  authMiddleware,
+  contactsRouter
+);
+*//*
+app.use(
+  "/messages",
+  authMiddleware,
+  messagesRouter
+);
+*/
