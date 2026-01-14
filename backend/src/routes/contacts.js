@@ -7,68 +7,60 @@ const router = express.Router();
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const CONTACTS_FILE = path.join(
+const contactsPath = path.join(
   __dirname,
-  "../storage/contacts.json"
+  "../data/contacts.json"
+);
+const usersPath = path.join(
+  __dirname,
+  "../data/users.json"
 );
 
-function readContacts() {
+function read(file) {
   return JSON.parse(
-    fs.readFileSync(CONTACTS_FILE, "utf-8")
+    fs.readFileSync(file, "utf-8")
   );
 }
 
-function writeContacts(data) {
+function write(file, data) {
   fs.writeFileSync(
-    CONTACTS_FILE,
+    file,
     JSON.stringify(data, null, 2)
   );
 }
 
-// отримати контакти користувача
+/* GET CONTACTS */
 router.get("/", (req, res) => {
-  const userId = req.user.id;
-  const contacts = readContacts().filter(
+  const userId =
+    req.headers.authorization?.split(" ")[1];
+  if (!userId) return res.json([]);
+
+  let contacts = read(contactsPath);
+  const users = read(usersPath);
+
+  let myContacts = contacts.filter(
     (c) => c.ownerId === userId
   );
-  res.json(contacts);
-});
 
-// додати контакт
-router.post("/", (req, res) => {
-  const { contactUserId, name } = req.body;
-  const userId = req.user.id;
+  /* AUTO CREATE CONTACTS */
+  if (myContacts.length === 0) {
+    users
+      .filter((u) => u.id !== userId)
+      .forEach((u) => {
+        contacts.push({
+          ownerId: userId,
+          contactUserId: u.id,
+          name: u.name,
+        });
+      });
 
-  if (!contactUserId || !name) {
-    return res
-      .status(400)
-      .json({ error: "Missing data" });
+    write(contactsPath, contacts);
+    myContacts = contacts.filter(
+      (c) => c.ownerId === userId
+    );
   }
 
-  const contacts = readContacts();
-
-  const exists = contacts.find(
-    (c) =>
-      c.ownerId === userId &&
-      c.contactUserId === contactUserId
-  );
-  if (exists) {
-    return res
-      .status(409)
-      .json({ error: "Contact already exists" });
-  }
-
-  const newContact = {
-    id: crypto.randomUUID(),
-    ownerId: userId,
-    contactUserId,
-    name,
-  };
-
-  contacts.push(newContact);
-  writeContacts(contacts);
-
-  res.json(newContact);
+  res.json(myContacts);
 });
 
 export default router;

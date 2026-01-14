@@ -2,35 +2,21 @@
 <html lang="uk">
   <head>
     <meta charset="UTF-8" />
-    <title>KeIT Messenger</title>
-    <link rel="stylesheet" href="messenger.css" />
+    <title>Messenger</title>
   </head>
   <body>
-    <div class="app">
-      <!-- Sidebar / Contacts -->
-      <div class="sidebar">
-        <h2>Контакти</h2>
-        <ul id="contacts"></ul>
-      </div>
+    <h1>Месенджер</h1>
+    <div id="status"></div>
 
-      <!-- Chat -->
-      <div class="chat">
-        <div id="chatHeader" class="chat-header">
-          Оберіть контакт
-        </div>
-
-        <div id="messages" class="messages"></div>
-
-        <div class="chat-input">
-          <input
-            id="messageInput"
-            placeholder="Введіть повідомлення…"
-          />
-          <button id="sendBtn">Надіслати</button>
-        </div>
-      </div>
-    </div>
-
-    <script src="messenger.js"></script>
+    <script>
+      const token = localStorage.getItem("token");
+      if (!token) {
+        location.href = "/frontend/login.html";
+      } else {
+        document.getElementById(
+          "status"
+        ).innerText = "Авторизовано";
+      }
+    </script>
   </body>
 </html>

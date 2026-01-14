@@ -7,64 +7,58 @@ const router = express.Router();
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const MESSAGES_FILE = path.join(
+const messagesPath = path.join(
   __dirname,
-  "../storage/messages.json"
+  "../data/messages.json"
 );
 
-function readMessages() {
+function read() {
   return JSON.parse(
-    fs.readFileSync(MESSAGES_FILE, "utf-8")
+    fs.readFileSync(messagesPath, "utf-8")
   );
 }
 
-function writeMessages(data) {
+function write(data) {
   fs.writeFileSync(
-    MESSAGES_FILE,
+    messagesPath,
     JSON.stringify(data, null, 2)
   );
 }
 
-// історія переписки з користувачем
-router.get("/:withUserId", (req, res) => {
-  const userId = req.user.id;
-  const withUserId = req.params.withUserId;
+/* GET CHAT */
+router.get("/:userId", (req, res) => {
+  const me =
+    req.headers.authorization?.split(" ")[1];
+  const other = req.params.userId;
 
-  const messages = readMessages().filter(
+  const messages = read().filter(
     (m) =>
-      (m.from === userId &&
-        m.to === withUserId) ||
-      (m.from === withUserId && m.to === userId)
+      (m.from === me && m.to === other) ||
+      (m.from === other && m.to === me)
   );
 
   res.json(messages);
 });
 
-// надіслати повідомлення
+/* SEND */
 router.post("/", (req, res) => {
-  const { to, text } = req.body;
-  const from = req.user.id;
-
-  if (!to || !text) {
+  const { from, to, text } = req.body;
+  if (!from || !to || !text)
     return res
       .status(400)
-      .json({ error: "user and text required" });
-  }
+      .json({ error: "invalid message" });
 
-  const messages = readMessages();
-
-  const message = {
-    id: crypto.randomUUID(),
+  const messages = read();
+  messages.push({
+    id: Date.now(),
     from,
     to,
     text,
-    createdAt: new Date().toISOString(),
-  };
+    time: new Date().toISOString(),
+  });
 
-  messages.push(message);
-  writeMessages(messages);
-
-  res.json(message);
+  write(messages);
+  res.json({ ok: true });
 });
 
 export default router;

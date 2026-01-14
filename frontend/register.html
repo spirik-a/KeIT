@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="uk">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Реєстрація</title>
+  </head>
+  <body>
+    <h1>Реєстрація</h1>
+
+    <input id="phone" placeholder="Телефон" />
+    <input id="name" placeholder="Імʼя" />
+    <input id="username" placeholder="Нік" />
+    <input
+      id="password"
+      type="password"
+      placeholder="Пароль"
+    />
+    <button onclick="register()">
+      Зареєструватися
+    </button>
+
+    <script>
+      async function register() {
+        const body = {
+          phone: phone.value,
+          name: name.value,
+          username: username.value,
+          password: password.value,
+        };
+
+        const r = await fetch("/users/register", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(body),
+        });
+
+        const data = await r.json();
+        alert("Готово, тепер увійдіть");
+        window.location.href =
+          "/frontend/login.html";
+      }
+    </script>
+  </body>
+</html>
