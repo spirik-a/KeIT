@@ -2,63 +2,106 @@ import express from "express";
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
+import authMiddleware from "../middleware/auth.js";
 
 const router = express.Router();
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const messagesPath = path.join(
+const STORAGE_DIR = path.join(
   __dirname,
-  "../data/messages.json"
+  "..",
+  "storage"
+);
+const MESSAGES_FILE = path.join(
+  STORAGE_DIR,
+  "messages.json"
+);
+const CONTACTS_FILE = path.join(
+  STORAGE_DIR,
+  "contacts.json"
 );
 
-function read() {
-  return JSON.parse(
-    fs.readFileSync(messagesPath, "utf-8")
-  );
+function safeReadJSON(file, fallback) {
+  if (!fs.existsSync(file)) return fallback;
+  try {
+    return JSON.parse(
+      fs.readFileSync(file, "utf-8")
+    );
+  } catch {
+    return fallback;
+  }
 }
 
-function write(data) {
+function writeJSON(file, data) {
   fs.writeFileSync(
-    messagesPath,
-    JSON.stringify(data, null, 2)
+    file,
+    JSON.stringify(data, null, 2),
+    "utf-8"
   );
 }
 
-/* GET CHAT */
-router.get("/:userId", (req, res) => {
-  const me =
-    req.headers.authorization?.split(" ")[1];
-  const other = req.params.userId;
-
-  const messages = read().filter(
-    (m) =>
-      (m.from === me && m.to === other) ||
-      (m.from === other && m.to === me)
+function ensureContactsBothWays(fromId, toId) {
+  const contactsMap = safeReadJSON(
+    CONTACTS_FILE,
+    {}
   );
+  contactsMap[fromId] = contactsMap[fromId] || [];
+  contactsMap[toId] = contactsMap[toId] || [];
 
-  res.json(messages);
-});
+  if (!contactsMap[fromId].includes(toId))
+    contactsMap[fromId].push(toId);
+  if (!contactsMap[toId].includes(fromId))
+    contactsMap[toId].push(fromId);
 
-/* SEND */
-router.post("/", (req, res) => {
-  const { from, to, text } = req.body;
-  if (!from || !to || !text)
+  writeJSON(CONTACTS_FILE, contactsMap);
+}
+
+router.get(
+  "/:userId",
+  authMiddleware,
+  (req, res) => {
+    const myId = req.user.id;
+    const otherId = req.params.userId;
+
+    const all = safeReadJSON(MESSAGES_FILE, []);
+    const dialog = all.filter(
+      (m) =>
+        (m.from === myId && m.to === otherId) ||
+        (m.from === otherId && m.to === myId)
+    );
+
+    res.json(dialog);
+  }
+);
+
+router.post("/", authMiddleware, (req, res) => {
+  const { to, text } = req.body || {};
+  if (!to || !text)
     return res
       .status(400)
-      .json({ error: "invalid message" });
+      .json({ error: "to and text required" });
 
-  const messages = read();
-  messages.push({
-    id: Date.now(),
-    from,
+  const myId = req.user.id;
+
+  const all = safeReadJSON(MESSAGES_FILE, []);
+
+  const msg = {
+    id: crypto.randomUUID(),
+    from: myId,
     to,
     text,
-    time: new Date().toISOString(),
-  });
+    createdAt: new Date().toISOString(),
+  };
 
-  write(messages);
-  res.json({ ok: true });
+  all.push(msg);
+  writeJSON(MESSAGES_FILE, all);
+
+  // авто-контакти
+  ensureContactsBothWays(myId, to);
+
+  res.json(msg);
 });
 
 export default router;
