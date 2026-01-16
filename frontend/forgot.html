@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="uk">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Відновлення пароля</title>
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1"
+    />
+    <style>
+      body {
+        font-family: Arial;
+        background: #0f172a;
+        color: #e5e7eb;
+        margin: 0;
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 20px;
+      }
+      .card {
+        width: 380px;
+        background: #020617;
+        padding: 20px;
+        border-radius: 12px;
+        border: 1px solid #1f2937;
+        box-sizing: border-box;
+      }
+      input,
+      button {
+        width: 100%;
+        padding: 10px;
+        margin-top: 10px;
+        border-radius: 8px;
+        border: 1px solid #334155;
+        background: #020617;
+        color: #e5e7eb;
+        box-sizing: border-box;
+      }
+      button {
+        background: #2563eb;
+        border: none;
+        cursor: pointer;
+        font-weight: 600;
+      }
+      .hint {
+        font-size: 12px;
+        color: #94a3b8;
+        margin-top: 12px;
+        line-height: 1.4;
+      }
+      a {
+        color: #93c5fd;
+        text-decoration: none;
+      }
+      code {
+        display: block;
+        margin-top: 10px;
+        padding: 10px;
+        background: #0b1220;
+        border: 1px dashed #334155;
+        border-radius: 8px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="card">
+      <h2>Відновлення пароля</h2>
+      <input
+        id="phone"
+        placeholder="Телефон (напр. +380991234567)"
+      />
+      <button id="btn">Отримати код</button>
+
+      <div
+        id="codeBox"
+        class="hint"
+        style="display: none"
+      >
+        Тимчасово (для тесту) код показано тут:
+        <code id="code"></code>
+        Далі перейдіть на
+        <a href="/frontend/reset.html"
+          >зміну пароля</a
+        >.
+      </div>
+
+      <div class="hint">
+        Після інтеграції SMS код буде приходити
+        повідомленням. Зараз код також видно у
+        консолі сервера.
+      </div>
+
+      <div class="hint">
+        <a href="/frontend/login.html"
+          >Назад до входу</a
+        >
+      </div>
+    </div>
+
+    <script>
+      const phone =
+        document.getElementById("phone");
+      const btn = document.getElementById("btn");
+      const codeBox =
+        document.getElementById("codeBox");
+      const codeEl =
+        document.getElementById("code");
+
+      btn.onclick = async () => {
+        const r = await fetch(
+          "/users/password-reset/request",
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              phone: phone.value.trim(),
+            }),
+          }
+        );
+        const data = await r.json();
+        if (!r.ok) {
+          alert(data.error || "Помилка");
+          return;
+        }
+        // Для тесту повертаємо code
+        if (data.code) {
+          codeEl.textContent = data.code;
+          codeBox.style.display = "block";
+        } else {
+          alert(
+            "Якщо номер існує — код сформовано. Перевірте SMS/консоль сервера."
+          );
+        }
+      };
+    </script>
+  </body>
+</html>

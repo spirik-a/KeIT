@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+  <meta charset="UTF-8" />
+  <title>Зміна пароля</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    body { font-family: Arial; background:#0f172a; color:#e5e7eb; margin:0; min-height:100vh; display:flex; align-items:center; justify-content:center; padding:20px; }
+    .card { width:380px; background:#020617; padding:20px; border-radius:12px; border:1px solid #1f2937; box-sizing:border-box; }
+    input, button { width:100%; padding:10px; margin-top:10px; border-radius:8px; border:1px solid #334155; background:#020617; color:#e5e7eb; box-sizing:border-box; }
+    button { background:#16a34a; border:none; cursor:pointer; font-weight:600; }
+    .row { display:flex; gap:10px; align-items:center; margin-top:10px; user-select:none; }
+    .row input[type="checkbox"] { width:auto; margin:0; transform: translateY(1px); }
+    .hint { font-size:12px; color:#94a3b8; margin-top:12px; line-height:1.4; }
+    a { color:#93c5fd; text-decoration:none; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h2>Зміна пароля</h2>
+
+    <input id="phone" placeholder="Телефон" />
+    <input id="code" placeholder="Код (6 цифр)" />
+    <input id="newPassword" type="password" placeholder="Новий пароль" />
+
+    <div class="row">
+      <input id="showPass" type="checkbox" />
+      <label for="showPass">Показати пароль</label>
+    </div>
+
+    <div class="hint">
+      Пароль: мін. 8 символів, 1 велика літера, 1 мала літера, 1 цифра, 1 спецсимвол.
+    </div>
+
+    <button id="btn">Змінити пароль</button>
+    <div class="hint"><a href="/frontend/login.html">Назад до входу</a></div>
+  </div>
+
+<script>
+  const phone = document.getElementById("phone");
+  const code = document.getElementById("code");
+  const newPassword = document.getElementById("newPassword");
+  const showPass = document.getElementById("showPass");
+  const btn = document.getElementById("btn");
+
+  showPass.onchange = () => {
+    newPassword.type = showPass.checked ? "text" : "password";
+  };
+
+  btn.onclick = async () => {
+    const r = await fetch("/users/password-reset/confirm", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        phone: phone.value.trim(),
+        code: code.value.trim(),
+        newPassword: newPassword.value
+      })
+    });
+
+    const data = await r.json();
+    if (!r.ok) {
+      alert(data.error || "Помилка");
+      return;
+    }
+
+    alert("Пароль змінено. Тепер увійдіть.");
+    location.href = "/frontend/login.html";
+  };
+</script>
+</body>
+</html>

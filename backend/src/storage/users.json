@@ -6,8 +6,19 @@
     "username": "SPIRIK",
     "role": "basic",
     "balance": 0,
-    "passwordSalt": "5ff2fd5ae62b853f370ede3c2ec7b9b0",
-    "passwordHash": "1014112abcc72338dd4494d1b923e6cbfe91386d0b4233e047ef101cb803032aa58b5599da075a450ccf9676f8dca6c8c5a2965d71b8fe4975e3e2d712ae03e8",
+    "passwordSalt": "d2de9f25bcfef64a9165231f65a0340c",
+    "passwordHash": "89bf0c5b85b55b0430e6f8bcb4479f116d9c2d82c7292066381d7bbedc8e37d5b92252c1af4b88d0f6052e5581dee79962d52858b208d87ca0db86cbcae2f24a",
     "createdAt": "2026-01-16T08:40:56.998Z"
+  },
+  {
+    "id": "71e96ba2-0e0d-4cec-8d3c-3227f04966d1",
+    "phone": "987654321",
+    "name": "unk",
+    "username": "unkn",
+    "role": "basic",
+    "balance": 0,
+    "passwordSalt": "423cc7adc323a6e60ec323a8b90699c4",
+    "passwordHash": "a119f63688618b8f19ce9bfa5607b94ff3bae4dff8296d55ff8585e25e395a2d96e72a3e3bc7606fd301b9bbd13bcd95640e7f3e170cea1c353939892ac2e06d",
+    "createdAt": "2026-01-16T11:54:41.091Z"
   }
 ]
