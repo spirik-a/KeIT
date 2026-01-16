@@ -2,41 +2,65 @@ import express from "express";
 import fs from "fs";
 import path from "path";
 import crypto from "crypto";
+import { fileURLToPath } from "url";
 
 const router = express.Router();
 
-// Використовуємо storage (як у твоєму persist раніше)
-const storageDir = path.resolve("src/storage");
-const usersPath = path.join(
-  storageDir,
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+function resolveStorageDir() {
+  const a = path.join(__dirname, "..", "storage");
+  const b = path.join(
+    __dirname,
+    "..",
+    "storadge"
+  ); // якщо у тебе папка так названа
+  if (fs.existsSync(a)) return a;
+  if (fs.existsSync(b)) return b;
+  // якщо жодної немає — створюємо правильну "storage"
+  fs.mkdirSync(a, { recursive: true });
+  return a;
+}
+
+const STORAGE_DIR = resolveStorageDir();
+const USERS_FILE = path.join(
+  STORAGE_DIR,
   "users.json"
 );
-const sessionsPath = path.join(
-  storageDir,
+const SESSIONS_FILE = path.join(
+  STORAGE_DIR,
   "sessions.json"
 );
 
-/* ===== ensure storage exists ===== */
-function ensureStorage() {
-  if (!fs.existsSync(storageDir)) {
-    fs.mkdirSync(storageDir, { recursive: true });
-  }
-  if (!fs.existsSync(usersPath)) {
-    fs.writeFileSync(usersPath, "[]", "utf-8");
-  }
-  if (!fs.existsSync(sessionsPath)) {
-    fs.writeFileSync(sessionsPath, "[]", "utf-8");
-  }
+function ensureFiles() {
+  if (!fs.existsSync(STORAGE_DIR))
+    fs.mkdirSync(STORAGE_DIR, {
+      recursive: true,
+    });
+  if (!fs.existsSync(USERS_FILE))
+    fs.writeFileSync(USERS_FILE, "[]", "utf-8");
+  if (!fs.existsSync(SESSIONS_FILE))
+    fs.writeFileSync(
+      SESSIONS_FILE,
+      "[]",
+      "utf-8"
+    );
 }
 
-function readJSON(file) {
-  ensureStorage();
-  const raw = fs.readFileSync(file, "utf-8");
-  return JSON.parse(raw);
+function readJSON(file, fallback) {
+  ensureFiles();
+  try {
+    return JSON.parse(
+      fs.readFileSync(file, "utf-8")
+    );
+  } catch {
+    return fallback;
+  }
 }
 
 function writeJSON(file, data) {
-  ensureStorage();
+  ensureFiles();
   fs.writeFileSync(
     file,
     JSON.stringify(data, null, 2),
@@ -44,53 +68,117 @@ function writeJSON(file, data) {
   );
 }
 
-function nowHuman() {
-  // "YYYY-MM-DD HH:MM:SS"
-  return new Date()
-    .toISOString()
-    .replace("T", " ")
-    .substring(0, 19);
+function normalizePhone(phone) {
+  return String(phone || "").trim();
 }
 
-/* ===== REGISTER ===== */
+function normalizeUsername(username) {
+  return String(username || "").trim();
+}
+
+function validatePassword(p) {
+  if (typeof p !== "string") return false;
+  if (p.length < 8) return false;
+  if (!/[a-z]/.test(p)) return false;
+  if (!/[A-Z]/.test(p)) return false;
+  if (!/[0-9]/.test(p)) return false;
+  if (!/[^A-Za-z0-9]/.test(p)) return false;
+  return true;
+}
+
+function hashPassword(password) {
+  const salt = crypto
+    .randomBytes(16)
+    .toString("hex");
+  const hash = crypto
+    .scryptSync(password, salt, 64)
+    .toString("hex");
+  return { salt, hash };
+}
+
+function verifyPassword(password, salt, hash) {
+  const test = crypto
+    .scryptSync(password, salt, 64)
+    .toString("hex");
+  return crypto.timingSafeEqual(
+    Buffer.from(test, "hex"),
+    Buffer.from(hash, "hex")
+  );
+}
+
+/**
+ * POST /users/register
+ * body: { phone, name, username, password }
+ */
 router.post("/register", (req, res) => {
-  const { phone, name, username, password } =
-    req.body;
+  const phone = normalizePhone(req.body?.phone);
+  const name = String(
+    req.body?.name || ""
+  ).trim();
+  const username = normalizeUsername(
+    req.body?.username
+  );
+  const password = req.body?.password;
 
   if (!phone || !name || !username || !password) {
     return res
       .status(400)
-      .json({ error: "Не всі поля заповнені" });
+      .json({ error: "Заповніть усі поля" });
   }
 
-  const users = readJSON(usersPath);
+  if (!/^[a-zA-Z0-9_.]{3,32}$/.test(username)) {
+    return res.status(400).json({
+      error:
+        "Нік: 3-32 символи (латиниця/цифри/._), без пробілів",
+    });
+  }
 
-  const exists = users.find(
-    (u) =>
-      u.phone === phone || u.username === username
-  );
+  if (!validatePassword(password)) {
+    return res.status(400).json({
+      error:
+        "Пароль: мін. 8 символів, великі/малі літери, цифра і спецсимвол",
+    });
+  }
 
-  if (exists) {
+  const users = readJSON(USERS_FILE, []);
+
+  if (
+    users.some((u) => (u.phone || "") === phone)
+  ) {
+    return res.status(409).json({
+      error: "Цей телефон вже зареєстровано",
+    });
+  }
+
+  if (
+    users.some(
+      (u) =>
+        (u.username || "").toLowerCase() ===
+        username.toLowerCase()
+    )
+  ) {
     return res
       .status(409)
-      .json({ error: "Користувач вже існує" });
+      .json({ error: "Цей нік вже зайнято" });
   }
+
+  const { salt, hash } = hashPassword(password);
 
   const user = {
     id: crypto.randomUUID(),
     phone,
     name,
     username,
-    password, // зберігаємо (наступним кроком замінимо на hash)
     role: "basic",
     balance: 0,
-    createdAt: nowHuman(),
+    passwordSalt: salt,
+    passwordHash: hash,
+    createdAt: new Date().toISOString(),
   };
 
   users.push(user);
-  writeJSON(usersPath, users);
+  writeJSON(USERS_FILE, users);
 
-  // пароль не повертаємо на фронт
   return res.status(201).json({
     id: user.id,
     phone: user.phone,
@@ -98,43 +186,58 @@ router.post("/register", (req, res) => {
     username: user.username,
     role: user.role,
     balance: user.balance,
+    createdAt: user.createdAt,
   });
 });
 
-/* ===== LOGIN ===== */
+/**
+ * POST /users/login
+ * body: { phone, password }
+ * response: { token, user }
+ */
 router.post("/login", (req, res) => {
-  const { phone, password } = req.body;
+  const phone = normalizePhone(req.body?.phone);
+  const password = req.body?.password;
 
   if (!phone || !password) {
     return res.status(400).json({
-      error: "Введи номер телефону та пароль",
+      error: "Вкажіть телефон і пароль",
     });
   }
 
-  const users = readJSON(usersPath);
+  const users = readJSON(USERS_FILE, []);
   const user = users.find(
-    (u) =>
-      u.phone === phone && u.password === password
+    (u) => (u.phone || "") === phone
   );
 
-  if (!user) {
-    return res.status(404).json({
-      error: "Невірний телефон або пароль",
-    });
-  }
+  if (!user)
+    return res
+      .status(404)
+      .json({ error: "Користувача не знайдено" });
 
+  const ok = verifyPassword(
+    password,
+    user.passwordSalt,
+    user.passwordHash
+  );
+  if (!ok)
+    return res
+      .status(401)
+      .json({ error: "Невірний пароль" });
+
+  const sessions = readJSON(SESSIONS_FILE, []);
   const token = crypto.randomUUID();
+  const now = new Date();
 
-  const sessions = readJSON(sessionsPath);
   sessions.push({
     token,
     userId: user.id,
     username: user.username,
-    createdAt: nowHuman(),
-    createdAtISO: new Date().toISOString(),
+    createdAt: now.toISOString(),
+    createdAtMs: now.getTime(),
   });
 
-  writeJSON(sessionsPath, sessions);
+  writeJSON(SESSIONS_FILE, sessions);
 
   return res.json({
     token,
@@ -147,73 +250,6 @@ router.post("/login", (req, res) => {
       balance: user.balance,
     },
   });
-});
-
-/* ===== ME ===== */
-router.get("/me", (req, res) => {
-  const auth = req.headers.authorization || "";
-  const token = auth.startsWith("Bearer ")
-    ? auth.slice(7)
-    : null;
-
-  if (!token) {
-    return res
-      .status(401)
-      .json({ error: "Відсутній токен" });
-  }
-
-  const sessions = readJSON(sessionsPath);
-  const session = sessions.find(
-    (s) => s.token === token
-  );
-
-  if (!session) {
-    return res
-      .status(401)
-      .json({ error: "Недійсна сесія" });
-  }
-
-  const users = readJSON(usersPath);
-  const user = users.find(
-    (u) => u.id === session.userId
-  );
-
-  if (!user) {
-    return res
-      .status(404)
-      .json({ error: "Користувача не знайдено" });
-  }
-
-  return res.json({
-    id: user.id,
-    phone: user.phone,
-    name: user.name,
-    username: user.username,
-    role: user.role,
-    balance: user.balance,
-  });
-});
-
-/* ===== LOGOUT ===== */
-router.post("/logout", (req, res) => {
-  const auth = req.headers.authorization || "";
-  const token = auth.startsWith("Bearer ")
-    ? auth.slice(7)
-    : null;
-
-  if (!token) {
-    return res
-      .status(400)
-      .json({ error: "Відсутній токен" });
-  }
-
-  let sessions = readJSON(sessionsPath);
-  sessions = sessions.filter(
-    (s) => s.token !== token
-  );
-  writeJSON(sessionsPath, sessions);
-
-  return res.json({ ok: true });
 });
 
 export default router;

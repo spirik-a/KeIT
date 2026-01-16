@@ -3,50 +3,152 @@
   <head>
     <meta charset="UTF-8" />
     <title>Вхід</title>
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1"
+    />
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        background: #0f172a;
+        color: #e5e7eb;
+        margin: 0;
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 20px;
+      }
+      .card {
+        width: 380px;
+        background: #020617;
+        padding: 20px;
+        border-radius: 12px;
+        box-sizing: border-box;
+        border: 1px solid #1f2937;
+      }
+      h2 {
+        margin: 0 0 10px 0;
+      }
+      input,
+      button {
+        width: 100%;
+        padding: 10px;
+        margin-top: 10px;
+        border-radius: 8px;
+        border: 1px solid #334155;
+        background: #020617;
+        color: #e5e7eb;
+        box-sizing: border-box;
+      }
+      button {
+        background: #16a34a;
+        border: none;
+        cursor: pointer;
+        font-weight: 600;
+      }
+      .row {
+        display: flex;
+        gap: 10px;
+        align-items: center;
+        margin-top: 10px;
+        user-select: none;
+      }
+      .row input[type="checkbox"] {
+        width: auto;
+        margin: 0;
+        transform: translateY(1px);
+      }
+      .hint {
+        font-size: 12px;
+        color: #94a3b8;
+        margin-top: 14px;
+        line-height: 1.4;
+      }
+      a {
+        color: #93c5fd;
+        text-decoration: none;
+      }
+    </style>
   </head>
   <body>
-    <h1>Вхід</h1>
+    <div class="card">
+      <h2>Вхід</h2>
 
-    <input id="phone" placeholder="Телефон" />
-    <input
-      id="password"
-      type="password"
-      placeholder="Пароль"
-    />
-    <button onclick="login()">Увійти</button>
+      <input
+        id="phone"
+        placeholder="Телефон (напр. +380991234567)"
+        autocomplete="tel"
+      />
+      <input
+        id="password"
+        type="password"
+        placeholder="Пароль"
+        autocomplete="current-password"
+      />
+
+      <div class="row">
+        <input id="showPass" type="checkbox" />
+        <label for="showPass"
+          >Показати пароль</label
+        >
+      </div>
+
+      <button id="btn">Увійти</button>
+
+      <div class="hint">
+        Немає акаунта?
+        <a href="/frontend/register.html"
+          >Зареєструватися</a
+        >
+      </div>
+    </div>
 
     <script>
-      async function login() {
-        const phone =
-          document.getElementById("phone").value;
-        const password =
-          document.getElementById(
-            "password"
-          ).value;
+      const phone =
+        document.getElementById("phone");
+      const password =
+        document.getElementById("password");
+      const showPass =
+        document.getElementById("showPass");
+      const btn = document.getElementById("btn");
+
+      showPass.addEventListener("change", () => {
+        password.type = showPass.checked
+          ? "text"
+          : "password";
+      });
+
+      btn.addEventListener("click", async () => {
+        const body = {
+          phone: phone.value.trim(),
+          password: password.value,
+        };
+
+        if (!body.phone || !body.password) {
+          alert("Заповніть телефон і пароль");
+          return;
+        }
 
         const r = await fetch("/users/login", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
           },
-          body: JSON.stringify({
-            phone,
-            password,
-          }),
+          body: JSON.stringify(body),
         });
 
         const data = await r.json();
-        if (data.token) {
-          localStorage.setItem(
-            "token",
-            data.token
-          );
-          window.location.href =
-            "/frontend/messenger.html";
-        } else {
-          alert("Помилка входу");
+
+        if (!r.ok) {
+          alert(data.error || "Помилка входу");
+          return;
         }
-      }
+
+        localStorage.setItem("token", data.token);
+        location.href =
+          "/frontend/messenger.html";
+      });
     </script>
   </body>
 </html>

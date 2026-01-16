@@ -1,1 +1,23 @@
-[]
+[
+  {
+    "token": "65b45275-8b3a-42e7-b0e4-3a53d31028eb",
+    "userId": "c76b98b4-3092-445a-a5bc-91fe8ff8d87e",
+    "username": "SPIRIK",
+    "createdAt": "2026-01-16T08:41:36.522Z",
+    "createdAtMs": 1768552896522
+  },
+  {
+    "token": "9cb472c4-704b-49c1-99bf-1b057402377a",
+    "userId": "c76b98b4-3092-445a-a5bc-91fe8ff8d87e",
+    "username": "SPIRIK",
+    "createdAt": "2026-01-16T08:42:53.512Z",
+    "createdAtMs": 1768552973512
+  },
+  {
+    "token": "1cf418d1-79f3-4a1e-af45-2a20733e9099",
+    "userId": "c76b98b4-3092-445a-a5bc-91fe8ff8d87e",
+    "username": "SPIRIK",
+    "createdAt": "2026-01-16T10:41:09.588Z",
+    "createdAtMs": 1768560069588
+  }
+]

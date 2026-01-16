@@ -3,30 +3,149 @@
   <head>
     <meta charset="UTF-8" />
     <title>Реєстрація</title>
+    <style>
+      body {
+        font-family: Arial;
+        background: #0f172a;
+        color: #e5e7eb;
+        margin: 0;
+        display: flex;
+        height: 100vh;
+        align-items: center;
+        justify-content: center;
+      }
+      .card {
+        width: 380px;
+        background: #020617;
+        padding: 20px;
+        border-radius: 12px;
+      }
+      input,
+      button {
+        width: 100%;
+        padding: 10px;
+        margin-top: 10px;
+        border-radius: 8px;
+        border: 1px solid #334155;
+        background: #020617;
+        color: #e5e7eb;
+      }
+      button {
+        background: #2563eb;
+        border: none;
+        cursor: pointer;
+      }
+      .row {
+        display: flex;
+        gap: 10px;
+        align-items: center;
+        margin-top: 10px;
+      }
+      .row input[type="checkbox"] {
+        width: auto;
+        margin: 0;
+      }
+      .hint {
+        font-size: 12px;
+        color: #94a3b8;
+        margin-top: 8px;
+        line-height: 1.4;
+      }
+      a {
+        color: #93c5fd;
+        text-decoration: none;
+      }
+    </style>
   </head>
   <body>
-    <h1>Реєстрація</h1>
+    <div class="card">
+      <h2>Реєстрація</h2>
 
-    <input id="phone" placeholder="Телефон" />
-    <input id="name" placeholder="Імʼя" />
-    <input id="username" placeholder="Нік" />
-    <input
-      id="password"
-      type="password"
-      placeholder="Пароль"
-    />
-    <button onclick="register()">
-      Зареєструватися
-    </button>
+      <input
+        id="phone"
+        placeholder="Телефон (напр. +380991234567)"
+      />
+      <input id="name" placeholder="Ім'я" />
+      <input
+        id="username"
+        placeholder="Нік (латиниця/цифри/._ без пробілів)"
+      />
+      <input
+        id="password"
+        type="password"
+        placeholder="Пароль"
+      />
+
+      <div class="row">
+        <input id="showPass" type="checkbox" />
+        <label for="showPass"
+          >Показати пароль</label
+        >
+      </div>
+
+      <div class="hint">
+        Пароль: мін. 8 символів, 1 велика літера,
+        1 мала літера, 1 цифра, 1 спецсимвол.
+      </div>
+
+      <button id="btn">Зареєструватися</button>
+
+      <div class="hint" style="margin-top: 14px">
+        Вже є акаунт?
+        <a href="/frontend/login.html">Увійти</a>
+      </div>
+    </div>
 
     <script>
-      async function register() {
+      const phone =
+        document.getElementById("phone");
+      const name =
+        document.getElementById("name");
+      const username =
+        document.getElementById("username");
+      const password =
+        document.getElementById("password");
+      const showPass =
+        document.getElementById("showPass");
+      const btn = document.getElementById("btn");
+
+      showPass.addEventListener("change", () => {
+        password.type = showPass.checked
+          ? "text"
+          : "password";
+      });
+
+      function validatePassword(p) {
+        if (p.length < 8) return false;
+        if (!/[a-z]/.test(p)) return false;
+        if (!/[A-Z]/.test(p)) return false;
+        if (!/[0-9]/.test(p)) return false;
+        if (!/[^A-Za-z0-9]/.test(p)) return false;
+        return true;
+      }
+
+      btn.onclick = async () => {
         const body = {
-          phone: phone.value,
-          name: name.value,
-          username: username.value,
+          phone: phone.value.trim(),
+          name: name.value.trim(),
+          username: username.value.trim(),
           password: password.value,
         };
+
+        if (
+          !body.phone ||
+          !body.name ||
+          !body.username ||
+          !body.password
+        ) {
+          alert("Заповніть усі поля");
+          return;
+        }
+
+        if (!validatePassword(body.password)) {
+          alert("Пароль не відповідає вимогам");
+          return;
+        }
 
         const r = await fetch("/users/register", {
           method: "POST",
@@ -37,10 +156,18 @@
         });
 
         const data = await r.json();
-        alert("Готово, тепер увійдіть");
-        window.location.href =
-          "/frontend/login.html";
-      }
+        if (!r.ok) {
+          alert(
+            data.error || "Помилка реєстрації"
+          );
+          return;
+        }
+
+        alert(
+          "Реєстрація успішна. Тепер увійдіть."
+        );
+        location.href = "/frontend/login.html";
+      };
     </script>
   </body>
 </html>

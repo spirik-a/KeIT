@@ -1,12 +1,13 @@
 [
   {
-    "id": "u1",
+    "id": "c76b98b4-3092-445a-a5bc-91fe8ff8d87e",
+    "phone": "0930649826",
     "name": "Andrew",
-    "email": "a@test.com"
-  },
-  {
-    "id": "u2",
-    "name": "Test User",
-    "email": "b@test.com"
+    "username": "SPIRIK",
+    "role": "basic",
+    "balance": 0,
+    "passwordSalt": "5ff2fd5ae62b853f370ede3c2ec7b9b0",
+    "passwordHash": "1014112abcc72338dd4494d1b923e6cbfe91386d0b4233e047ef101cb803032aa58b5599da075a450ccf9676f8dca6c8c5a2965d71b8fe4975e3e2d712ae03e8",
+    "createdAt": "2026-01-16T08:40:56.998Z"
   }
 ]
