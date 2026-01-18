@@ -2,70 +2,41 @@ import express from "express";
 import fs from "fs";
 import path from "path";
 import crypto from "crypto";
-import { fileURLToPath } from "url";
 
 const router = express.Router();
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-function resolveStorageDir() {
-  const a = path.join(__dirname, "..", "storage");
-  const b = path.join(
-    __dirname,
-    "..",
-    "storadge"
-  ); // якщо у тебе папка так названа
-  if (fs.existsSync(a)) return a;
-  if (fs.existsSync(b)) return b;
-  fs.mkdirSync(a, { recursive: true });
-  return a;
-}
-
-const STORAGE_DIR = resolveStorageDir();
-const USERS_FILE = path.join(
-  STORAGE_DIR,
+// Використовуємо storage (як у твоєму persist раніше)
+const storageDir = path.resolve("src/storage");
+const usersPath = path.join(
+  storageDir,
   "users.json"
 );
-const SESSIONS_FILE = path.join(
-  STORAGE_DIR,
+const sessionsPath = path.join(
+  storageDir,
   "sessions.json"
 );
-const RESET_FILE = path.join(
-  STORAGE_DIR,
-  "password_resets.json"
-);
 
-function ensureFiles() {
-  if (!fs.existsSync(STORAGE_DIR))
-    fs.mkdirSync(STORAGE_DIR, {
-      recursive: true,
-    });
-  if (!fs.existsSync(USERS_FILE))
-    fs.writeFileSync(USERS_FILE, "[]", "utf-8");
-  if (!fs.existsSync(SESSIONS_FILE))
-    fs.writeFileSync(
-      SESSIONS_FILE,
-      "[]",
-      "utf-8"
-    );
-  if (!fs.existsSync(RESET_FILE))
-    fs.writeFileSync(RESET_FILE, "[]", "utf-8");
-}
-
-function readJSON(file, fallback) {
-  ensureFiles();
-  try {
-    return JSON.parse(
-      fs.readFileSync(file, "utf-8")
-    );
-  } catch {
-    return fallback;
+/* ===== ensure storage exists ===== */
+function ensureStorage() {
+  if (!fs.existsSync(storageDir)) {
+    fs.mkdirSync(storageDir, { recursive: true });
+  }
+  if (!fs.existsSync(usersPath)) {
+    fs.writeFileSync(usersPath, "[]", "utf-8");
+  }
+  if (!fs.existsSync(sessionsPath)) {
+    fs.writeFileSync(sessionsPath, "[]", "utf-8");
   }
 }
 
+function readJSON(file) {
+  ensureStorage();
+  const raw = fs.readFileSync(file, "utf-8");
+  return JSON.parse(raw);
+}
+
 function writeJSON(file, data) {
-  ensureFiles();
+  ensureStorage();
   fs.writeFileSync(
     file,
     JSON.stringify(data, null, 2),
@@ -73,127 +44,53 @@ function writeJSON(file, data) {
   );
 }
 
-function normalizePhone(phone) {
-  return String(phone || "").trim();
+function nowHuman() {
+  // "YYYY-MM-DD HH:MM:SS"
+  return new Date()
+    .toISOString()
+    .replace("T", " ")
+    .substring(0, 19);
 }
 
-function normalizeUsername(username) {
-  return String(username || "").trim();
-}
-
-function validatePassword(p) {
-  if (typeof p !== "string") return false;
-  if (p.length < 8) return false;
-  if (!/[a-z]/.test(p)) return false;
-  if (!/[A-Z]/.test(p)) return false;
-  if (!/[0-9]/.test(p)) return false;
-  if (!/[^A-Za-z0-9]/.test(p)) return false;
-  return true;
-}
-
-function hashPassword(password) {
-  const salt = crypto
-    .randomBytes(16)
-    .toString("hex");
-  const hash = crypto
-    .scryptSync(password, salt, 64)
-    .toString("hex");
-  return { salt, hash };
-}
-
-function verifyPassword(password, salt, hash) {
-  const test = crypto
-    .scryptSync(password, salt, 64)
-    .toString("hex");
-  return crypto.timingSafeEqual(
-    Buffer.from(test, "hex"),
-    Buffer.from(hash, "hex")
-  );
-}
-
-function generate6DigitCode() {
-  const n = crypto.randomInt(0, 1000000);
-  return String(n).padStart(6, "0");
-}
-
-/**
- * POST /users/register
- * body: { phone, name, username, password }
- */
+/* ===== REGISTER ===== */
 router.post("/register", (req, res) => {
-  const phone = normalizePhone(req.body?.phone);
-  const name = String(
-    req.body?.name || ""
-  ).trim();
-  const username = normalizeUsername(
-    req.body?.username
-  );
-  const password = req.body?.password;
+  const { phone, name, username, password } =
+    req.body;
 
   if (!phone || !name || !username || !password) {
     return res
       .status(400)
-      .json({ error: "Заповніть усі поля" });
+      .json({ error: "Не всі поля заповнені" });
   }
 
-  if (!/^[a-zA-Z0-9_.]{3,32}$/.test(username)) {
-    return res
-      .status(400)
-      .json({
-        error:
-          "Нік: 3-32 символи (латиниця/цифри/._), без пробілів",
-      });
-  }
+  const users = readJSON(usersPath);
 
-  if (!validatePassword(password)) {
-    return res
-      .status(400)
-      .json({
-        error:
-          "Пароль: мін. 8 символів, великі/малі літери, цифра і спецсимвол",
-      });
-  }
+  const exists = users.find(
+    (u) =>
+      u.phone === phone || u.username === username
+  );
 
-  const users = readJSON(USERS_FILE, []);
-
-  if (
-    users.some((u) => (u.phone || "") === phone)
-  ) {
+  if (exists) {
     return res
       .status(409)
-      .json({
-        error: "Цей телефон вже зареєстровано",
-      });
+      .json({ error: "Користувач вже існує" });
   }
-  if (
-    users.some(
-      (u) =>
-        (u.username || "").toLowerCase() ===
-        username.toLowerCase()
-    )
-  ) {
-    return res
-      .status(409)
-      .json({ error: "Цей нік вже зайнято" });
-  }
-
-  const { salt, hash } = hashPassword(password);
 
   const user = {
     id: crypto.randomUUID(),
     phone,
     name,
     username,
+    password, // зберігаємо (наступним кроком замінимо на hash)
     role: "basic",
     balance: 0,
-    passwordSalt: salt,
-    passwordHash: hash,
-    createdAt: new Date().toISOString(),
+    createdAt: nowHuman(),
   };
 
   users.push(user);
-  writeJSON(USERS_FILE, users);
+  writeJSON(usersPath, users);
 
+  // пароль не повертаємо на фронт
   return res.status(201).json({
     id: user.id,
     phone: user.phone,
@@ -201,59 +98,43 @@ router.post("/register", (req, res) => {
     username: user.username,
     role: user.role,
     balance: user.balance,
-    createdAt: user.createdAt,
   });
 });
 
-/**
- * POST /users/login
- * body: { phone, password }
- * response: { token, user }
- */
+/* ===== LOGIN ===== */
 router.post("/login", (req, res) => {
-  const phone = normalizePhone(req.body?.phone);
-  const password = req.body?.password;
+  const { phone, password } = req.body;
 
   if (!phone || !password) {
-    return res
-      .status(400)
-      .json({
-        error: "Вкажіть телефон і пароль",
-      });
+    return res.status(400).json({
+      error: "Введи номер телефону та пароль",
+    });
   }
 
-  const users = readJSON(USERS_FILE, []);
+  const users = readJSON(usersPath);
   const user = users.find(
-    (u) => (u.phone || "") === phone
+    (u) =>
+      u.phone === phone && u.password === password
   );
-  if (!user)
-    return res
-      .status(404)
-      .json({ error: "Користувача не знайдено" });
 
-  const ok = verifyPassword(
-    password,
-    user.passwordSalt,
-    user.passwordHash
-  );
-  if (!ok)
-    return res
-      .status(401)
-      .json({ error: "Невірний пароль" });
+  if (!user) {
+    return res.status(404).json({
+      error: "Невірний телефон або пароль",
+    });
+  }
 
-  const sessions = readJSON(SESSIONS_FILE, []);
   const token = crypto.randomUUID();
-  const now = new Date();
 
+  const sessions = readJSON(sessionsPath);
   sessions.push({
     token,
     userId: user.id,
     username: user.username,
-    createdAt: now.toISOString(),
-    createdAtMs: now.getTime(),
+    createdAt: nowHuman(),
+    createdAtISO: new Date().toISOString(),
   });
 
-  writeJSON(SESSIONS_FILE, sessions);
+  writeJSON(sessionsPath, sessions);
 
   return res.json({
     token,
@@ -268,172 +149,71 @@ router.post("/login", (req, res) => {
   });
 });
 
-/**
- * POST /users/password-reset/request
- * body: { phone }
- * response (для тесту): { ok: true, code: "123456" }
- */
-router.post(
-  "/password-reset/request",
-  (req, res) => {
-    const phone = normalizePhone(req.body?.phone);
-    if (!phone)
-      return res
-        .status(400)
-        .json({ error: "Вкажіть телефон" });
+/* ===== ME ===== */
+router.get("/me", (req, res) => {
+  const auth = req.headers.authorization || "";
+  const token = auth.startsWith("Bearer ")
+    ? auth.slice(7)
+    : null;
 
-    const users = readJSON(USERS_FILE, []);
-    const user = users.find(
-      (u) => (u.phone || "") === phone
-    );
-    if (!user) {
-      // Безпечно: не кажемо зловмиснику, що телефону не існує
-      return res.json({ ok: true });
-    }
-
-    const resets = readJSON(RESET_FILE, []);
-    const code = generate6DigitCode();
-    const { salt, hash } = hashPassword(code);
-
-    const expiresAt = new Date(
-      Date.now() + 10 * 60 * 1000
-    ); // 10 хв
-
-    resets.push({
-      id: crypto.randomUUID(),
-      userId: user.id,
-      phone: user.phone,
-      codeSalt: salt,
-      codeHash: hash,
-      createdAt: new Date().toISOString(),
-      expiresAt: expiresAt.toISOString(),
-      attempts: 0,
-    });
-
-    writeJSON(RESET_FILE, resets);
-
-    // Для нульового бюджету: показуємо код в консолі і у відповіді
-    console.log(
-      `[RESET CODE] phone=${phone} code=${code} (valid 10 min)`
-    );
-
-    return res.json({ ok: true, code }); // пізніше при SMS — прибрати "code"
+  if (!token) {
+    return res
+      .status(401)
+      .json({ error: "Відсутній токен" });
   }
-);
 
-/**
- * POST /users/password-reset/confirm
- * body: { phone, code, newPassword }
- */
-router.post(
-  "/password-reset/confirm",
-  (req, res) => {
-    const phone = normalizePhone(req.body?.phone);
-    const code = String(
-      req.body?.code || ""
-    ).trim();
-    const newPassword = req.body?.newPassword;
+  const sessions = readJSON(sessionsPath);
+  const session = sessions.find(
+    (s) => s.token === token
+  );
 
-    if (!phone || !code || !newPassword) {
-      return res
-        .status(400)
-        .json({
-          error:
-            "Вкажіть телефон, код та новий пароль",
-        });
-    }
-
-    if (!validatePassword(newPassword)) {
-      return res
-        .status(400)
-        .json({
-          error:
-            "Пароль: мін. 8 символів, великі/малі літери, цифра і спецсимвол",
-        });
-    }
-
-    const users = readJSON(USERS_FILE, []);
-    const user = users.find(
-      (u) => (u.phone || "") === phone
-    );
-    if (!user)
-      return res
-        .status(400)
-        .json({ error: "Невірні дані" });
-
-    let resets = readJSON(RESET_FILE, []);
-
-    // беремо останній не прострочений
-    const now = Date.now();
-    const candidates = resets
-      .filter(
-        (r) =>
-          r.userId === user.id &&
-          new Date(r.expiresAt).getTime() > now
-      )
-      .sort(
-        (a, b) =>
-          new Date(b.createdAt).getTime() -
-          new Date(a.createdAt).getTime()
-      );
-
-    const reset = candidates[0];
-    if (!reset)
-      return res
-        .status(400)
-        .json({
-          error:
-            "Код прострочений або не запитаний",
-        });
-
-    if (reset.attempts >= 5)
-      return res
-        .status(400)
-        .json({
-          error:
-            "Забагато спроб. Запитайте новий код",
-        });
-
-    const ok = verifyPassword(
-      code,
-      reset.codeSalt,
-      reset.codeHash
-    );
-    if (!ok) {
-      // інкремент спроб
-      resets = resets.map((r) =>
-        r.id === reset.id
-          ? { ...r, attempts: r.attempts + 1 }
-          : r
-      );
-      writeJSON(RESET_FILE, resets);
-      return res
-        .status(400)
-        .json({ error: "Невірний код" });
-    }
-
-    // оновлюємо пароль
-    const { salt, hash } =
-      hashPassword(newPassword);
-    const updatedUsers = users.map((u) =>
-      u.id === user.id
-        ? {
-            ...u,
-            passwordSalt: salt,
-            passwordHash: hash,
-          }
-        : u
-    );
-    writeJSON(USERS_FILE, updatedUsers);
-
-    // чистимо reset-записи цього користувача
-    const cleaned = resets.filter(
-      (r) => r.userId !== user.id
-    );
-    writeJSON(RESET_FILE, cleaned);
-
-    return res.json({ ok: true });
+  if (!session) {
+    return res
+      .status(401)
+      .json({ error: "Недійсна сесія" });
   }
-);
+
+  const users = readJSON(usersPath);
+  const user = users.find(
+    (u) => u.id === session.userId
+  );
+
+  if (!user) {
+    return res
+      .status(404)
+      .json({ error: "Користувача не знайдено" });
+  }
+
+  return res.json({
+    id: user.id,
+    phone: user.phone,
+    name: user.name,
+    username: user.username,
+    role: user.role,
+    balance: user.balance,
+  });
+});
+
+/* ===== LOGOUT ===== */
+router.post("/logout", (req, res) => {
+  const auth = req.headers.authorization || "";
+  const token = auth.startsWith("Bearer ")
+    ? auth.slice(7)
+    : null;
+
+  if (!token) {
+    return res
+      .status(400)
+      .json({ error: "Відсутній токен" });
+  }
+
+  let sessions = readJSON(sessionsPath);
+  sessions = sessions.filter(
+    (s) => s.token !== token
+  );
+  writeJSON(sessionsPath, sessions);
+
+  return res.json({ ok: true });
+});
 
 export default router;

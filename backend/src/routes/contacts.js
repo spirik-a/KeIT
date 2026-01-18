@@ -9,11 +9,20 @@ const router = express.Router();
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const STORAGE_DIR = path.join(
-  __dirname,
-  "..",
-  "storage"
-);
+function resolveStorageDir() {
+  const a = path.join(__dirname, "..", "storage");
+  const b = path.join(
+    __dirname,
+    "..",
+    "storadge"
+  );
+  if (fs.existsSync(a)) return a;
+  if (fs.existsSync(b)) return b;
+  fs.mkdirSync(a, { recursive: true });
+  return a;
+}
+
+const STORAGE_DIR = resolveStorageDir();
 const USERS_FILE = path.join(
   STORAGE_DIR,
   "users.json"
@@ -23,8 +32,23 @@ const CONTACTS_FILE = path.join(
   "contacts.json"
 );
 
-function safeReadJSON(file, fallback) {
-  if (!fs.existsSync(file)) return fallback;
+function ensureFiles() {
+  if (!fs.existsSync(STORAGE_DIR))
+    fs.mkdirSync(STORAGE_DIR, {
+      recursive: true,
+    });
+  if (!fs.existsSync(USERS_FILE))
+    fs.writeFileSync(USERS_FILE, "[]", "utf-8");
+  if (!fs.existsSync(CONTACTS_FILE))
+    fs.writeFileSync(
+      CONTACTS_FILE,
+      "{}",
+      "utf-8"
+    );
+}
+
+function readJSON(file, fallback) {
+  ensureFiles();
   try {
     return JSON.parse(
       fs.readFileSync(file, "utf-8")
@@ -35,6 +59,7 @@ function safeReadJSON(file, fallback) {
 }
 
 function writeJSON(file, data) {
+  ensureFiles();
   fs.writeFileSync(
     file,
     JSON.stringify(data, null, 2),
@@ -43,18 +68,11 @@ function writeJSON(file, data) {
 }
 
 /**
- * contacts.json формат:
- * {
- *   "ownerUserId": ["contactUserId1", "contactUserId2"]
- * }
+ * GET /contacts
  */
-
 router.get("/", authMiddleware, (req, res) => {
-  const users = safeReadJSON(USERS_FILE, []);
-  const contactsMap = safeReadJSON(
-    CONTACTS_FILE,
-    {}
-  );
+  const users = readJSON(USERS_FILE, []);
+  const contactsMap = readJSON(CONTACTS_FILE, {});
 
   const ids = contactsMap[req.user.id] || [];
   const list = ids
@@ -73,15 +91,16 @@ router.get("/", authMiddleware, (req, res) => {
 
 /**
  * POST /contacts/add
- * body: { username: "nick" }  або { userId: "uuid" }
+ * body: { username } або { userId }
  */
 router.post(
   "/add",
   authMiddleware,
   (req, res) => {
     const { username, userId } = req.body || {};
-    const users = safeReadJSON(USERS_FILE, []);
-    const contactsMap = safeReadJSON(
+
+    const users = readJSON(USERS_FILE, []);
+    const contactsMap = readJSON(
       CONTACTS_FILE,
       {}
     );
@@ -96,7 +115,7 @@ router.post(
       contact = users.find(
         (u) =>
           (u.username || "").toLowerCase() ===
-          username.toLowerCase()
+          String(username).toLowerCase()
       );
     }
 
@@ -109,8 +128,8 @@ router.post(
         .status(400)
         .json({ error: "Cannot add yourself" });
 
-    contactsMap[req.user.id] =
-      contactsMap[req.user.id] || [];
+    if (!contactsMap[req.user.id])
+      contactsMap[req.user.id] = [];
     if (
       !contactsMap[req.user.id].includes(
         contact.id

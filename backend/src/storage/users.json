@@ -11,14 +11,13 @@
     "createdAt": "2026-01-16T08:40:56.998Z"
   },
   {
-    "id": "71e96ba2-0e0d-4cec-8d3c-3227f04966d1",
-    "phone": "987654321",
-    "name": "unk",
-    "username": "unkn",
+    "id": "921e1a9a-4b9f-4985-91e2-b3bb03c6f000",
+    "phone": "4560206",
+    "name": "unkOLD",
+    "username": "unk",
+    "password": "4560206okBG#",
     "role": "basic",
     "balance": 0,
-    "passwordSalt": "423cc7adc323a6e60ec323a8b90699c4",
-    "passwordHash": "a119f63688618b8f19ce9bfa5607b94ff3bae4dff8296d55ff8585e25e395a2d96e72a3e3bc7606fd301b9bbd13bcd95640e7f3e170cea1c353939892ac2e06d",
-    "createdAt": "2026-01-16T11:54:41.091Z"
+    "createdAt": "2026-01-18 15:52:01"
   }
 ]
