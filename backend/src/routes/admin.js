@@ -82,11 +82,9 @@ function requireAdmin(req, res, next) {
   const provided = req.headers["x-admin-key"];
 
   if (!adminKey)
-    return res
-      .status(500)
-      .json({
-        error: "ADMIN_KEY is not set on server",
-      });
+    return res.status(500).json({
+      error: "ADMIN_KEY is not set on server",
+    });
   if (
     !provided ||
     String(provided) !== String(adminKey)
@@ -99,9 +97,31 @@ function requireAdmin(req, res, next) {
 }
 
 /**
+ * GET /admin/users
+ * headers: X-Admin-Key: <ADMIN_KEY>
+ * Повертає список користувачів (без хешів паролю)
+ */
+router.get("/users", requireAdmin, (req, res) => {
+  const users = readUsers().map((u) => ({
+    id: u.id,
+    phone: u.phone,
+    name: u.name,
+    username: u.username,
+    role: u.role,
+    balance: u.balance,
+    createdAt: u.createdAt,
+  }));
+  res.json({
+    storageDir: STORAGE_DIR,
+    count: users.length,
+    users,
+  });
+});
+
+/**
  * POST /admin/set-password
  * headers: X-Admin-Key: <ADMIN_KEY>
- * body: { phone OR username, newPassword }
+ * body: { phone OR username OR userId, newPassword }
  */
 router.post(
   "/set-password",
@@ -113,39 +133,48 @@ router.post(
     const username = String(
       req.body?.username || ""
     ).trim();
+    const userId = String(
+      req.body?.userId || ""
+    ).trim();
     const newPassword = req.body?.newPassword;
 
-    if ((!phone && !username) || !newPassword) {
-      return res
-        .status(400)
-        .json({
-          error:
-            "Provide phone or username and newPassword",
-        });
+    if (
+      (!phone && !username && !userId) ||
+      !newPassword
+    ) {
+      return res.status(400).json({
+        error:
+          "Provide phone or username or userId and newPassword",
+      });
     }
 
     if (!validatePassword(newPassword)) {
-      return res
-        .status(400)
-        .json({
-          error:
-            "Password does not meet requirements",
-        });
+      return res.status(400).json({
+        error:
+          "Password does not meet requirements",
+      });
     }
 
     const users = readUsers();
 
-    const idx = users.findIndex((u) =>
-      phone
-        ? (u.phone || "") === phone
-        : (u.username || "").toLowerCase() ===
-          username.toLowerCase()
-    );
+    const idx = users.findIndex((u) => {
+      if (userId) return (u.id || "") === userId;
+      if (phone)
+        return (
+          String(u.phone || "").trim() === phone
+        );
+      return (
+        String(u.username || "").toLowerCase() ===
+        username.toLowerCase()
+      );
+    });
 
-    if (idx === -1)
-      return res
-        .status(404)
-        .json({ error: "User not found" });
+    if (idx === -1) {
+      return res.status(404).json({
+        error: "User not found",
+        hint: "Use GET /admin/users to see exact phone/username/userId",
+      });
+    }
 
     const { salt, hash } =
       hashPassword(newPassword);

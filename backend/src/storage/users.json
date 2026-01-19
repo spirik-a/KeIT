@@ -18,6 +18,9 @@
     "password": "4560206okBG#",
     "role": "basic",
     "balance": 0,
-    "createdAt": "2026-01-18 15:52:01"
+    "createdAt": "2026-01-18 15:52:01",
+    "passwordSalt": "6bab2f06d563667b10c2f8075f4f8086",
+    "passwordHash": "f2edd34c4bb41c1146a12c39f4d72c3adbeeb8e7ca74e3e9ace43952f942d5587394c676a3cc740924729b017153bf989f214499c91e81e98c0c00f726f36f12",
+    "passwordUpdatedAt": "2026-01-19T12:11:04.910Z"
   }
 ]
