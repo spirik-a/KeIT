@@ -1,0 +1,453 @@
+<!DOCTYPE html>
+<html lang="uk">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Адмін-панель</title>
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1"
+    />
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        margin: 0;
+        background: #0b1220;
+        color: #e5e7eb;
+      }
+      header {
+        padding: 16px 20px;
+        border-bottom: 1px solid #1f2a44;
+        display: flex;
+        gap: 12px;
+        align-items: center;
+      }
+      header h1 {
+        font-size: 18px;
+        margin: 0;
+      }
+      .wrap {
+        display: grid;
+        grid-template-columns: 420px 1fr;
+        gap: 16px;
+        padding: 16px;
+      }
+      .card {
+        background: #0f172a;
+        border: 1px solid #1f2a44;
+        border-radius: 12px;
+        padding: 14px;
+      }
+      .card h2 {
+        margin: 0 0 10px 0;
+        font-size: 16px;
+      }
+      input,
+      button,
+      select {
+        width: 100%;
+        padding: 10px;
+        border-radius: 10px;
+        border: 1px solid #223052;
+        background: #0b1220;
+        color: #e5e7eb;
+        box-sizing: border-box;
+      }
+      button {
+        cursor: pointer;
+        font-weight: 600;
+        background: #2563eb;
+        border: none;
+      }
+      button.secondary {
+        background: #334155;
+      }
+      .row {
+        display: flex;
+        gap: 10px;
+      }
+      .row > * {
+        flex: 1;
+      }
+      .hint {
+        font-size: 12px;
+        color: #94a3b8;
+        line-height: 1.4;
+        margin-top: 10px;
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+      }
+      th,
+      td {
+        border-bottom: 1px solid #1f2a44;
+        padding: 8px;
+        text-align: left;
+        font-size: 13px;
+      }
+      th {
+        color: #cbd5e1;
+      }
+      .pill {
+        display: inline-block;
+        padding: 2px 8px;
+        border-radius: 999px;
+        background: #111c33;
+        border: 1px solid #223052;
+        font-size: 12px;
+      }
+      .mono {
+        font-family: ui-monospace, SFMono-Regular,
+          Menlo, monospace;
+        font-size: 12px;
+      }
+      .ok {
+        color: #86efac;
+      }
+      .err {
+        color: #fca5a5;
+      }
+      pre {
+        white-space: pre-wrap;
+        word-break: break-word;
+        background: #0b1220;
+        border: 1px solid #223052;
+        padding: 10px;
+        border-radius: 10px;
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>Адмін-панель (локальна)</h1>
+      <div class="mono">/frontend/admin.html</div>
+    </header>
+
+    <div class="wrap">
+      <div class="card">
+        <h2>Доступ</h2>
+        <input
+          id="adminKey"
+          type="password"
+          placeholder="ADMIN_KEY"
+        />
+
+        <div class="hint">
+          Сервер має бути запущений з
+          <span class="mono">ADMIN_KEY</span>.
+        </div>
+
+        <div style="height: 14px"></div>
+
+        <div class="row">
+          <button id="btnPing" class="secondary">
+            Ping
+          </button>
+          <button id="btnLoad" class="secondary">
+            Оновити список
+          </button>
+        </div>
+
+        <div style="height: 10px"></div>
+
+        <label class="hint"
+          >Вибраний користувач</label
+        >
+        <select id="userSelect"></select>
+
+        <div style="height: 12px"></div>
+
+        <h2>Зміна пароля</h2>
+        <input
+          id="newPassword"
+          type="password"
+          placeholder="Новий пароль"
+        />
+        <div class="row" style="margin-top: 10px">
+          <button id="btnSetPass">Змінити</button>
+          <button
+            id="btnShowPass"
+            class="secondary"
+            type="button"
+          >
+            Показати
+          </button>
+        </div>
+
+        <div id="status" class="hint"></div>
+        <div class="hint">
+          Діагностика відповіді:
+        </div>
+        <pre id="debug">(порожньо)</pre>
+      </div>
+
+      <div class="card">
+        <h2>Користувачі</h2>
+        <div class="hint">
+          Виводяться з
+          <span class="mono"
+            >GET /admin/users</span
+          >
+        </div>
+        <div
+          class="hint mono"
+          id="storageInfo"
+        ></div>
+
+        <div style="height: 10px"></div>
+
+        <table>
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Телефон</th>
+              <th>Нік</th>
+              <th>Роль</th>
+              <th>Баланс</th>
+            </tr>
+          </thead>
+          <tbody id="usersTbody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <script>
+      const adminKey =
+        document.getElementById("adminKey");
+      const btnPing =
+        document.getElementById("btnPing");
+      const btnLoad =
+        document.getElementById("btnLoad");
+      const userSelect =
+        document.getElementById("userSelect");
+      const usersTbody =
+        document.getElementById("usersTbody");
+      const storageInfo = document.getElementById(
+        "storageInfo"
+      );
+      const status =
+        document.getElementById("status");
+      const debug =
+        document.getElementById("debug");
+
+      const newPassword = document.getElementById(
+        "newPassword"
+      );
+      const btnSetPass =
+        document.getElementById("btnSetPass");
+      const btnShowPass = document.getElementById(
+        "btnShowPass"
+      );
+
+      let usersCache = [];
+
+      function setStatus(text, ok = true) {
+        status.innerHTML = `<span class="${
+          ok ? "ok" : "err"
+        }">${text}</span>`;
+      }
+
+      function validatePassword(p) {
+        if (!p || p.length < 8) return false;
+        if (!/[a-z]/.test(p)) return false;
+        if (!/[A-Z]/.test(p)) return false;
+        if (!/[0-9]/.test(p)) return false;
+        if (!/[^A-Za-z0-9]/.test(p)) return false;
+        return true;
+      }
+
+      async function fetchJson(
+        url,
+        options = {}
+      ) {
+        const r = await fetch(url, options);
+        const text = await r.text();
+        let json = null;
+        try {
+          json = JSON.parse(text);
+        } catch {}
+        return { r, text, json };
+      }
+
+      function renderUsers(payload) {
+        usersCache = payload.users || [];
+        storageInfo.textContent = `storageDir: ${
+          payload.storageDir || ""
+        } | count: ${
+          payload.count ?? usersCache.length
+        }`;
+
+        userSelect.innerHTML = "";
+        for (const u of usersCache) {
+          const opt =
+            document.createElement("option");
+          opt.value = u.id;
+          opt.textContent = `${
+            u.username || "(no username)"
+          } | ${u.phone || "(no phone)"} | ${
+            u.name || ""
+          }`;
+          userSelect.appendChild(opt);
+        }
+
+        usersTbody.innerHTML = "";
+        for (const u of usersCache) {
+          const tr = document.createElement("tr");
+          tr.innerHTML = `
+        <td class="mono">${u.id}</td>
+        <td>${u.phone || ""}</td>
+        <td>${u.username || ""}</td>
+        <td><span class="pill">${
+          u.role || ""
+        }</span></td>
+        <td>${u.balance ?? 0}</td>
+      `;
+          usersTbody.appendChild(tr);
+        }
+      }
+
+      async function ping() {
+        const key = adminKey.value.trim();
+        if (!key) {
+          setStatus("Введи ADMIN_KEY", false);
+          return;
+        }
+
+        const { r, text, json } = await fetchJson(
+          "/admin/ping",
+          {
+            headers: { "X-Admin-Key": key },
+          }
+        );
+
+        debug.textContent = `PING status: ${r.status}\nRAW:\n${text}`;
+
+        if (!r.ok) {
+          setStatus(
+            json && json.error
+              ? json.error
+              : "Ping error",
+            false
+          );
+          return;
+        }
+        setStatus("Ping OK", true);
+      }
+
+      async function loadUsers() {
+        const key = adminKey.value.trim();
+        if (!key) {
+          setStatus("Введи ADMIN_KEY", false);
+          return;
+        }
+
+        const { r, text, json } = await fetchJson(
+          "/admin/users",
+          {
+            headers: { "X-Admin-Key": key },
+          }
+        );
+
+        debug.textContent = `USERS status: ${r.status}\nRAW:\n${text}`;
+
+        if (!r.ok) {
+          setStatus(
+            json && json.error
+              ? json.error
+              : "Помилка оновлення користувачів",
+            false
+          );
+          return;
+        }
+
+        renderUsers(json);
+        setStatus(
+          `Оновлено: ${
+            json.count ?? json.users?.length ?? 0
+          }`,
+          true
+        );
+      }
+
+      async function setPassword() {
+        const key = adminKey.value.trim();
+        if (!key) {
+          setStatus("Введи ADMIN_KEY", false);
+          return;
+        }
+
+        const userId = userSelect.value;
+        if (!userId) {
+          setStatus(
+            "Немає вибраного користувача",
+            false
+          );
+          return;
+        }
+
+        const pass = newPassword.value;
+        if (!validatePassword(pass)) {
+          setStatus(
+            "Пароль не відповідає вимогам",
+            false
+          );
+          return;
+        }
+
+        const { r, text, json } = await fetchJson(
+          "/admin/set-password",
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "X-Admin-Key": key,
+            },
+            body: JSON.stringify({
+              userId,
+              newPassword: pass,
+            }),
+          }
+        );
+
+        debug.textContent = `SET-PASSWORD status: ${r.status}\nRAW:\n${text}`;
+
+        if (!r.ok) {
+          setStatus(
+            json && json.error
+              ? json.error
+              : "Помилка зміни пароля",
+            false
+          );
+          return;
+        }
+
+        setStatus(
+          `Пароль змінено для: ${
+            json.user?.username || json.user?.id
+          }`,
+          true
+        );
+        newPassword.value = "";
+      }
+
+      btnPing.onclick = ping;
+      btnLoad.onclick = loadUsers;
+      btnSetPass.onclick = setPassword;
+
+      btnShowPass.onclick = () => {
+        if (newPassword.type === "password") {
+          newPassword.type = "text";
+          btnShowPass.textContent = "Приховати";
+        } else {
+          newPassword.type = "password";
+          btnShowPass.textContent = "Показати";
+        }
+      };
+
+      setStatus(
+        "Введи ADMIN_KEY і натисни Ping або Оновити список",
+        true
+      );
+    </script>
+  </body>
+</html>

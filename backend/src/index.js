@@ -15,7 +15,7 @@ const __dirname = path.dirname(__filename);
 
 app.use(express.json());
 
-// FRONTEND
+// Frontend directory: KeIT/frontend
 const frontendPath = path.join(
   __dirname,
   "..",
@@ -27,19 +27,22 @@ app.use(
   express.static(frontendPath)
 );
 
-// API
+// API routes
 app.use("/users", usersRouter);
 app.use("/contacts", contactsRouter);
 app.use("/messages", messagesRouter);
 app.use("/admin", adminRouter);
 
-app.get("/", (req, res) => {
-  res.send("Server works");
-});
+app.get("/", (req, res) =>
+  res.send("Server works")
+);
 
 app.listen(PORT, () => {
   console.log(
     `Server running on http://localhost:${PORT}`
   );
   console.log("Frontend path:", frontendPath);
+  console.log(
+    "Admin endpoints: /admin/ping, /admin/users, /admin/set-password"
+  );
 });

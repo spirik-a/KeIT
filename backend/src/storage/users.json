@@ -11,16 +11,15 @@
     "createdAt": "2026-01-16T08:40:56.998Z"
   },
   {
-    "id": "921e1a9a-4b9f-4985-91e2-b3bb03c6f000",
+    "id": "3f1ccb99-6bea-4aa5-8fb8-81b97f4b4888",
     "phone": "4560206",
-    "name": "unkOLD",
-    "username": "unk",
-    "password": "4560206okBG#",
+    "name": "TST",
+    "username": "CHECKER",
     "role": "basic",
     "balance": 0,
-    "createdAt": "2026-01-18 15:52:01",
-    "passwordSalt": "6bab2f06d563667b10c2f8075f4f8086",
-    "passwordHash": "f2edd34c4bb41c1146a12c39f4d72c3adbeeb8e7ca74e3e9ace43952f942d5587394c676a3cc740924729b017153bf989f214499c91e81e98c0c00f726f36f12",
-    "passwordUpdatedAt": "2026-01-19T12:11:04.910Z"
+    "passwordSalt": "25abb3ac8bc25fdd9c09a935f8904215",
+    "passwordHash": "9ebfb72e5a0ca919355d458f1a3fa36ac2511380ddca7a53266a480a81bf07ad55c47d23e785854d3c2530e52ad3d57ea53cf060006f14c1abad6fdd76ebc43e",
+    "createdAt": "2026-01-21T14:51:02.391Z",
+    "passwordUpdatedAt": "2026-01-22T09:17:01.683Z"
   }
 ]

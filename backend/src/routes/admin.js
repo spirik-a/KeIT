@@ -1,61 +1,13 @@
 import express from "express";
-import fs from "fs";
-import path from "path";
 import crypto from "crypto";
-import { fileURLToPath } from "url";
+import {
+  STORAGE_DIR,
+  USERS_FILE,
+  readJSON,
+  writeJSON,
+} from "../lib/storage.js";
 
 const router = express.Router();
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-function resolveStorageDir() {
-  const a = path.join(__dirname, "..", "storage");
-  const b = path.join(
-    __dirname,
-    "..",
-    "storadge"
-  );
-  if (fs.existsSync(a)) return a;
-  if (fs.existsSync(b)) return b;
-  fs.mkdirSync(a, { recursive: true });
-  return a;
-}
-
-const STORAGE_DIR = resolveStorageDir();
-const USERS_FILE = path.join(
-  STORAGE_DIR,
-  "users.json"
-);
-
-function ensureUsersFile() {
-  if (!fs.existsSync(STORAGE_DIR))
-    fs.mkdirSync(STORAGE_DIR, {
-      recursive: true,
-    });
-  if (!fs.existsSync(USERS_FILE))
-    fs.writeFileSync(USERS_FILE, "[]", "utf-8");
-}
-
-function readUsers() {
-  ensureUsersFile();
-  try {
-    return JSON.parse(
-      fs.readFileSync(USERS_FILE, "utf-8")
-    );
-  } catch {
-    return [];
-  }
-}
-
-function writeUsers(users) {
-  ensureUsersFile();
-  fs.writeFileSync(
-    USERS_FILE,
-    JSON.stringify(users, null, 2),
-    "utf-8"
-  );
-}
 
 function validatePassword(p) {
   if (typeof p !== "string") return false;
@@ -81,48 +33,53 @@ function requireAdmin(req, res, next) {
   const adminKey = process.env.ADMIN_KEY;
   const provided = req.headers["x-admin-key"];
 
-  if (!adminKey)
+  if (!adminKey) {
     return res.status(500).json({
       error: "ADMIN_KEY is not set on server",
+      hint: "Start server with: $env:ADMIN_KEY='your_key'; npm start",
     });
+  }
+
   if (
     !provided ||
     String(provided) !== String(adminKey)
   ) {
-    return res
-      .status(403)
-      .json({ error: "Forbidden" });
+    return res.status(403).json({
+      error: "Forbidden",
+      hint: "Wrong X-Admin-Key header",
+    });
   }
+
   next();
 }
 
-/**
- * GET /admin/users
- * headers: X-Admin-Key: <ADMIN_KEY>
- * Повертає список користувачів (без хешів паролю)
- */
+router.get("/ping", requireAdmin, (req, res) => {
+  res.json({ ok: true, storageDir: STORAGE_DIR });
+});
+
 router.get("/users", requireAdmin, (req, res) => {
-  const users = readUsers().map((u) => ({
-    id: u.id,
-    phone: u.phone,
-    name: u.name,
-    username: u.username,
-    role: u.role,
-    balance: u.balance,
-    createdAt: u.createdAt,
-  }));
+  const users = readJSON(USERS_FILE, []).map(
+    (u) => ({
+      id: u.id,
+      phone: u.phone,
+      name: u.name,
+      username: u.username,
+      role: u.role,
+      balance: u.balance,
+      createdAt: u.createdAt,
+      passwordUpdatedAt:
+        u.passwordUpdatedAt || null,
+    })
+  );
+
   res.json({
+    ok: true,
     storageDir: STORAGE_DIR,
     count: users.length,
     users,
   });
 });
 
-/**
- * POST /admin/set-password
- * headers: X-Admin-Key: <ADMIN_KEY>
- * body: { phone OR username OR userId, newPassword }
- */
 router.post(
   "/set-password",
   requireAdmin,
@@ -155,10 +112,11 @@ router.post(
       });
     }
 
-    const users = readUsers();
+    const users = readJSON(USERS_FILE, []);
 
     const idx = users.findIndex((u) => {
-      if (userId) return (u.id || "") === userId;
+      if (userId)
+        return String(u.id || "") === userId;
       if (phone)
         return (
           String(u.phone || "").trim() === phone
@@ -172,7 +130,7 @@ router.post(
     if (idx === -1) {
       return res.status(404).json({
         error: "User not found",
-        hint: "Use GET /admin/users to see exact phone/username/userId",
+        hint: "Use GET /admin/users to see exact userId/phone/username",
       });
     }
 
@@ -183,10 +141,11 @@ router.post(
     users[idx].passwordUpdatedAt =
       new Date().toISOString();
 
-    writeUsers(users);
+    writeJSON(USERS_FILE, users);
 
     res.json({
       ok: true,
+      storageDir: STORAGE_DIR,
       user: {
         id: users[idx].id,
         phone: users[idx].phone,
