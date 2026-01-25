@@ -3,43 +3,79 @@
   <head>
     <meta charset="UTF-8" />
     <title>KeIT Messenger</title>
-    <link rel="stylesheet" href="messenger.css" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1"
+    />
+    <link
+      rel="stylesheet"
+      href="/frontend/messenger.css"
+    />
   </head>
   <body>
     <div class="app">
       <aside class="sidebar">
-        <h2>Контакти</h2>
-
-        <div class="add-contact">
-          <input
-            id="addUsername"
-            placeholder="Нік контакту (username)"
-          />
-          <button id="addBtn">Додати</button>
+        <div class="me">
+          <div class="me-title">Профіль</div>
+          <div id="meLine" class="me-line">
+            ...
+          </div>
+          <button
+            id="logoutBtn"
+            class="secondary"
+          >
+            Вийти
+          </button>
         </div>
 
-        <ul id="contacts"></ul>
+        <div class="addContact">
+          <div class="blockTitle">
+            Додати контакт
+          </div>
+          <input
+            id="addUsername"
+            placeholder="Нік (наприклад cheker)"
+          />
+          <button id="addBtn">Додати</button>
+          <div id="addStatus" class="hint"></div>
+        </div>
+
+        <div class="contacts">
+          <div class="blockTitle">Контакти</div>
+          <div
+            id="contactsList"
+            class="list"
+          ></div>
+        </div>
+
+        <div class="dialogs">
+          <div class="blockTitle">Діалоги</div>
+          <div
+            id="dialogsList"
+            class="list"
+          ></div>
+        </div>
       </aside>
 
       <main class="chat">
-        <div class="chat-header">
-          <span id="chatTitle"
-            >Оберіть контакт</span
-          >
+        <div class="chatHeader">
+          <div id="chatWith">
+            Оберіть контакт або діалог
+          </div>
         </div>
 
         <div id="messages" class="messages"></div>
 
-        <div class="chat-input">
+        <div class="composer">
           <input
-            id="messageInput"
-            placeholder="Введіть повідомлення..."
+            id="msgInput"
+            placeholder="Напишіть повідомлення..."
           />
           <button id="sendBtn">Надіслати</button>
         </div>
       </main>
     </div>
 
-    <script src="messenger.js"></script>
+    <script src="/frontend/messenger.js"></script>
   </body>
 </html>

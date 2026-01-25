@@ -1,1 +1,34 @@
-[]
+[
+  {
+    "id": "dff6aa99-5402-4a90-88c5-ded7131d3b18",
+    "fromId": "f86364fb-e583-44bf-b985-4ac7c429d5bc",
+    "toId": "fed64718-f77a-4549-96f1-efeb3c80ef7c",
+    "text": "123",
+    "createdAt": "2026-01-23T16:49:40.388Z",
+    "createdAtMs": 1769186980388
+  },
+  {
+    "id": "32f15756-0c78-42f6-ab66-31b3c07bc21b",
+    "fromId": "fed64718-f77a-4549-96f1-efeb3c80ef7c",
+    "toId": "f86364fb-e583-44bf-b985-4ac7c429d5bc",
+    "text": "456",
+    "createdAt": "2026-01-23T16:50:12.018Z",
+    "createdAtMs": 1769187012018
+  },
+  {
+    "id": "afdf5a93-8bca-4563-b7cd-a115a7018530",
+    "fromId": "fed64718-f77a-4549-96f1-efeb3c80ef7c",
+    "toId": "042bf71a-e721-484e-afae-a5cf782826e4",
+    "text": "748",
+    "createdAt": "2026-01-25T15:27:17.806Z",
+    "createdAtMs": 1769354837806
+  },
+  {
+    "id": "7ef9a015-9720-4554-b333-ac9b8be40034",
+    "fromId": "f86364fb-e583-44bf-b985-4ac7c429d5bc",
+    "toId": "042bf71a-e721-484e-afae-a5cf782826e4",
+    "text": "HI",
+    "createdAt": "2026-01-25T15:57:04.735Z",
+    "createdAtMs": 1769356624735
+  }
+]

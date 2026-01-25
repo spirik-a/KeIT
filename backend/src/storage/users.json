@@ -1,25 +1,35 @@
 [
   {
-    "id": "c76b98b4-3092-445a-a5bc-91fe8ff8d87e",
+    "id": "f86364fb-e583-44bf-b985-4ac7c429d5bc",
     "phone": "0930649826",
-    "name": "Andrew",
+    "name": "spirik",
     "username": "SPIRIK",
     "role": "basic",
     "balance": 0,
-    "passwordSalt": "d2de9f25bcfef64a9165231f65a0340c",
-    "passwordHash": "89bf0c5b85b55b0430e6f8bcb4479f116d9c2d82c7292066381d7bbedc8e37d5b92252c1af4b88d0f6052e5581dee79962d52858b208d87ca0db86cbcae2f24a",
-    "createdAt": "2026-01-16T08:40:56.998Z"
+    "passwordSalt": "2704d89733087abfe78cd5adbe250db3",
+    "passwordHash": "36b8d134ed1d44fc6faf35b5fa7c587cea56cb4751231b979fa966ab057bc7321e7a6a56ffa173ccefb542eb2d54f5dbc944545ad8d751bbdabb3e346b184b0c",
+    "createdAt": "2026-01-22T17:15:07.999Z"
   },
   {
-    "id": "3f1ccb99-6bea-4aa5-8fb8-81b97f4b4888",
+    "id": "fed64718-f77a-4549-96f1-efeb3c80ef7c",
     "phone": "4560206",
-    "name": "TST",
-    "username": "CHECKER",
+    "name": "checker",
+    "username": "TST",
     "role": "basic",
     "balance": 0,
-    "passwordSalt": "25abb3ac8bc25fdd9c09a935f8904215",
-    "passwordHash": "9ebfb72e5a0ca919355d458f1a3fa36ac2511380ddca7a53266a480a81bf07ad55c47d23e785854d3c2530e52ad3d57ea53cf060006f14c1abad6fdd76ebc43e",
-    "createdAt": "2026-01-21T14:51:02.391Z",
-    "passwordUpdatedAt": "2026-01-22T09:17:01.683Z"
+    "passwordSalt": "f774dad84bf5c5d08def5556c28485d5",
+    "passwordHash": "1936e6bdc3c09d49c1b6c7e0e21ba7c86e7adf136991ee12fdf309d559fd613adfe48c9d77cb5dcca0028591605fcadfc0bf7d319a4168e6facf2b6a8c8ce1ad",
+    "createdAt": "2026-01-22T17:16:06.753Z"
+  },
+  {
+    "id": "042bf71a-e721-484e-afae-a5cf782826e4",
+    "phone": "0972384845",
+    "name": "Oksana",
+    "username": "MOM",
+    "role": "basic",
+    "balance": 0,
+    "passwordSalt": "395269ebe6290adf89ee262328c0a524",
+    "passwordHash": "c6cac90bbe940fc0c4a106da9a4d1693c4c429778edf520e8742b2f61a119190ebb28b0284c3615e70f79751399683bc3b41e1002c430b70f6a4e54ea53383bb",
+    "createdAt": "2026-01-25T15:26:17.102Z"
   }
 ]

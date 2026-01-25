@@ -1,74 +1,28 @@
 import express from "express";
-import fs from "fs";
-import path from "path";
-import { fileURLToPath } from "url";
 import authMiddleware from "../middleware/auth.js";
+import {
+  USERS_FILE,
+  CONTACTS_FILE,
+  readJSON,
+  writeJSON,
+} from "../lib/storage.js";
 
 const router = express.Router();
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-function resolveStorageDir() {
-  const a = path.join(__dirname, "..", "storage");
-  const b = path.join(
-    __dirname,
-    "..",
-    "storadge"
-  );
-  if (fs.existsSync(a)) return a;
-  if (fs.existsSync(b)) return b;
-  fs.mkdirSync(a, { recursive: true });
-  return a;
-}
-
-const STORAGE_DIR = resolveStorageDir();
-const USERS_FILE = path.join(
-  STORAGE_DIR,
-  "users.json"
-);
-const CONTACTS_FILE = path.join(
-  STORAGE_DIR,
-  "contacts.json"
-);
-
-function ensureFiles() {
-  if (!fs.existsSync(STORAGE_DIR))
-    fs.mkdirSync(STORAGE_DIR, {
-      recursive: true,
-    });
-  if (!fs.existsSync(USERS_FILE))
-    fs.writeFileSync(USERS_FILE, "[]", "utf-8");
-  if (!fs.existsSync(CONTACTS_FILE))
-    fs.writeFileSync(
-      CONTACTS_FILE,
-      "{}",
-      "utf-8"
-    );
-}
-
-function readJSON(file, fallback) {
-  ensureFiles();
-  try {
-    return JSON.parse(
-      fs.readFileSync(file, "utf-8")
-    );
-  } catch {
-    return fallback;
-  }
-}
-
-function writeJSON(file, data) {
-  ensureFiles();
-  fs.writeFileSync(
-    file,
-    JSON.stringify(data, null, 2),
-    "utf-8"
-  );
+function userPublic(u) {
+  return {
+    id: u.id,
+    phone: u.phone,
+    name: u.name,
+    username: u.username,
+    role: u.role,
+    balance: u.balance,
+  };
 }
 
 /**
  * GET /contacts
+ * Повертає список контактів поточного користувача
  */
 router.get("/", authMiddleware, (req, res) => {
   const users = readJSON(USERS_FILE, []);
@@ -78,13 +32,7 @@ router.get("/", authMiddleware, (req, res) => {
   const list = ids
     .map((id) => users.find((u) => u.id === id))
     .filter(Boolean)
-    .map((u) => ({
-      id: u.id,
-      name: u.name,
-      username: u.username,
-      phone: u.phone,
-      role: u.role,
-    }));
+    .map(userPublic);
 
   res.json(list);
 });
@@ -97,13 +45,18 @@ router.post(
   "/add",
   authMiddleware,
   (req, res) => {
-    const { username, userId } = req.body || {};
-
     const users = readJSON(USERS_FILE, []);
     const contactsMap = readJSON(
       CONTACTS_FILE,
       {}
     );
+
+    const username = String(
+      req.body?.username || ""
+    ).trim();
+    const userId = String(
+      req.body?.userId || ""
+    ).trim();
 
     let contact = null;
 
@@ -115,18 +68,18 @@ router.post(
       contact = users.find(
         (u) =>
           (u.username || "").toLowerCase() ===
-          String(username).toLowerCase()
+          username.toLowerCase()
       );
     }
 
     if (!contact)
       return res
         .status(404)
-        .json({ error: "Contact not found" });
+        .json({ error: "Контакт не знайдено" });
     if (contact.id === req.user.id)
       return res
         .status(400)
-        .json({ error: "Cannot add yourself" });
+        .json({ error: "Не можна додати себе" });
 
     if (!contactsMap[req.user.id])
       contactsMap[req.user.id] = [];
@@ -138,17 +91,22 @@ router.post(
       contactsMap[req.user.id].push(contact.id);
     }
 
+    // (опційно) взаємне додавання
+    if (!contactsMap[contact.id])
+      contactsMap[contact.id] = [];
+    if (
+      !contactsMap[contact.id].includes(
+        req.user.id
+      )
+    ) {
+      contactsMap[contact.id].push(req.user.id);
+    }
+
     writeJSON(CONTACTS_FILE, contactsMap);
 
     res.json({
       ok: true,
-      contact: {
-        id: contact.id,
-        name: contact.name,
-        username: contact.username,
-        phone: contact.phone,
-        role: contact.role,
-      },
+      contact: userPublic(contact),
     });
   }
 );
