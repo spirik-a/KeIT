@@ -17,18 +17,16 @@ function userPublic(u) {
     username: u.username,
     role: u.role,
     balance: u.balance,
+    avatarUrl: u.avatarUrl || null,
+    status: u.status || null,
   };
 }
 
-/**
- * GET /contacts
- * Повертає список контактів поточного користувача
- */
 router.get("/", authMiddleware, (req, res) => {
   const users = readJSON(USERS_FILE, []);
   const contactsMap = readJSON(CONTACTS_FILE, {});
-
   const ids = contactsMap[req.user.id] || [];
+
   const list = ids
     .map((id) => users.find((u) => u.id === id))
     .filter(Boolean)
@@ -37,10 +35,6 @@ router.get("/", authMiddleware, (req, res) => {
   res.json(list);
 });
 
-/**
- * POST /contacts/add
- * body: { username } або { userId }
- */
 router.post(
   "/add",
   authMiddleware,
@@ -51,6 +45,9 @@ router.post(
       {}
     );
 
+    const phone = String(
+      req.body?.phone || ""
+    ).trim();
     const username = String(
       req.body?.username || ""
     ).trim();
@@ -60,17 +57,21 @@ router.post(
 
     let contact = null;
 
-    if (userId) {
+    if (userId)
       contact = users.find(
         (u) => u.id === userId
       );
-    } else if (username) {
+    else if (phone)
+      contact = users.find(
+        (u) =>
+          String(u.phone || "").trim() === phone
+      );
+    else if (username)
       contact = users.find(
         (u) =>
           (u.username || "").toLowerCase() ===
           username.toLowerCase()
       );
-    }
 
     if (!contact)
       return res
@@ -87,20 +88,18 @@ router.post(
       !contactsMap[req.user.id].includes(
         contact.id
       )
-    ) {
+    )
       contactsMap[req.user.id].push(contact.id);
-    }
 
-    // (опційно) взаємне додавання
+    // взаємно
     if (!contactsMap[contact.id])
       contactsMap[contact.id] = [];
     if (
       !contactsMap[contact.id].includes(
         req.user.id
       )
-    ) {
+    )
       contactsMap[contact.id].push(req.user.id);
-    }
 
     writeJSON(CONTACTS_FILE, contactsMap);
 

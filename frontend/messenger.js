@@ -1,19 +1,22 @@
 const token = localStorage.getItem("token");
-const me = JSON.parse(
+let me = JSON.parse(
   localStorage.getItem("user") || "null"
 );
 
-if (!token) {
+if (!token)
   location.href = "/frontend/login.html";
-}
 
 const meLine = document.getElementById("meLine");
+const meAvatar =
+  document.getElementById("meAvatar");
+const meStatus =
+  document.getElementById("meStatus");
+const meBox = document.getElementById("meBox");
 const logoutBtn =
   document.getElementById("logoutBtn");
 
-const addUsername = document.getElementById(
-  "addUsername"
-);
+const addUsernameOrPhone =
+  document.getElementById("addUsernameOrPhone");
 const addBtn = document.getElementById("addBtn");
 const addStatus =
   document.getElementById("addStatus");
@@ -36,7 +39,6 @@ const sendBtn =
   document.getElementById("sendBtn");
 
 let selectedPeerId = null;
-let selectedPeerLabel = "";
 let lastRenderedCount = 0;
 
 function authHeaders(extra = {}) {
@@ -61,12 +63,44 @@ async function apiJson(url, options = {}) {
   };
 }
 
-function setMeLine() {
+function escapeHtml(s) {
+  return String(s)
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;");
+}
+
+function formatTime(iso) {
+  try {
+    return new Date(iso).toLocaleString("uk-UA");
+  } catch {
+    return iso;
+  }
+}
+
+function avatarUrl(user) {
+  // Поки що: або збережений шлях (пізніше зробимо upload), або дефолт
+  return (
+    user?.avatarUrl ||
+    "/frontend/assets/default-avatar.png"
+  );
+}
+
+function setMeUI() {
   if (!me) {
-    meLine.textContent = "Невідомий користувач";
+    meLine.textContent =
+      "Завантаження профілю...";
+    meStatus.textContent = "";
+    meAvatar.src =
+      "/frontend/assets/default-avatar.png";
     return;
   }
-  meLine.textContent = `${me.name} (@${me.username})`;
+  meLine.textContent = `${me.phone || ""}  •  @${
+    me.username || ""
+  }`.trim();
+  meStatus.textContent =
+    me.status || "Статус: (не задано)";
+  meAvatar.src = avatarUrl(me);
 }
 
 logoutBtn.onclick = () => {
@@ -75,20 +109,57 @@ logoutBtn.onclick = () => {
   location.href = "/frontend/login.html";
 };
 
-addBtn.onclick = async () => {
-  addStatus.textContent = "";
-  const username = addUsername.value.trim();
-  if (!username) {
-    addStatus.textContent = "Введіть нік.";
+// Перехід на профіль
+meBox.onclick = () => {
+  location.href = "/frontend/profile.html";
+};
+
+// Якщо localStorage.user пустий — підтягуємо з сервера (маршрут додамо нижче)
+async function ensureMe() {
+  if (me?.id) {
+    setMeUI();
     return;
   }
+  const res = await apiJson("/users/me", {
+    headers: authHeaders(),
+  });
+  if (res.ok) {
+    me = res.json;
+    localStorage.setItem(
+      "user",
+      JSON.stringify(me)
+    );
+  }
+  setMeUI();
+}
+
+/* ДОДАВАННЯ КОНТАКТУ: спочатку телефон, потім нік */
+addBtn.onclick = async () => {
+  addStatus.textContent = "";
+  const value = addUsernameOrPhone.value.trim();
+  if (!value) {
+    addStatus.textContent =
+      "Введіть номер телефону або нік.";
+    return;
+  }
+
+  // якщо схоже на номер — шлемо як phone, інакше як username
+  const isPhone =
+    value.startsWith("+") ||
+    /^\d{7,15}$/.test(
+      value.replaceAll(/\s/g, "")
+    );
+
+  const payload = isPhone
+    ? { phone: value }
+    : { username: value };
 
   const res = await apiJson("/contacts/add", {
     method: "POST",
     headers: authHeaders({
       "Content-Type": "application/json",
     }),
-    body: JSON.stringify({ username }),
+    body: JSON.stringify(payload),
   });
 
   if (!res.ok) {
@@ -99,7 +170,7 @@ addBtn.onclick = async () => {
   }
 
   addStatus.textContent = "Контакт додано.";
-  addUsername.value = "";
+  addUsernameOrPhone.value = "";
   await refreshContacts();
 };
 
@@ -127,7 +198,6 @@ async function refreshContacts() {
   const res = await apiJson("/contacts", {
     headers: authHeaders(),
   });
-
   if (!res.ok) return;
 
   const contacts = res.json || [];
@@ -135,12 +205,22 @@ async function refreshContacts() {
     contactsList,
     contacts,
     (c) => c.id,
-    (c) =>
-      `<div class="title">${c.name} (@${
-        c.username
-      })</div><div class="sub">${
-        c.phone || ""
-      }</div>`,
+    (c) => `
+      <div class="contactRow">
+        <img class="avatar" src="${escapeHtml(
+          c.avatarUrl ||
+            "/frontend/assets/default-avatar.png"
+        )}" />
+        <div>
+          <div class="title">${escapeHtml(
+            c.name
+          )} (@${escapeHtml(c.username)})</div>
+          <div class="sub">${escapeHtml(
+            c.phone || ""
+          )}</div>
+        </div>
+      </div>
+    `,
     (c) =>
       selectPeer(
         c.id,
@@ -162,10 +242,14 @@ async function refreshDialogs() {
     (d) => d.peer.id,
     (d) => {
       const title = d.peer.username
-        ? `${d.peer.username}`
+        ? `@${d.peer.username}`
         : d.peer.id;
       const last = d.lastMessage?.text || "";
-      return `<div class="title">@${title}</div><div class="sub">${last}</div>`;
+      return `<div class="title">${escapeHtml(
+        title
+      )}</div><div class="sub">${escapeHtml(
+        last
+      )}</div>`;
     },
     (d) => {
       const label = d.peer.username
@@ -178,27 +262,15 @@ async function refreshDialogs() {
 
 function selectPeer(peerId, label) {
   selectedPeerId = peerId;
-  selectedPeerLabel = label;
   chatWith.textContent = `Чат з ${label}`;
   lastRenderedCount = 0;
   messagesEl.innerHTML = "";
-  // Перерендеримо списки щоб підсвітити active
   refreshContacts();
   refreshDialogs();
   loadConversation(true);
 }
 
-function formatTime(iso) {
-  try {
-    const d = new Date(iso);
-    return d.toLocaleString("uk-UA");
-  } catch {
-    return iso;
-  }
-}
-
 function renderMessages(list) {
-  // щоб не мерехтіло — якщо кількість не змінилась, не перерендерюємо
   if (list.length === lastRenderedCount) return;
   lastRenderedCount = list.length;
 
@@ -210,20 +282,13 @@ function renderMessages(list) {
       "msg " + (isMe ? "me" : "other");
     div.innerHTML = `
       <div>${escapeHtml(m.text)}</div>
-      <div class="time">${formatTime(
-        m.createdAt
+      <div class="time">${escapeHtml(
+        formatTime(m.createdAt)
       )}</div>
     `;
     messagesEl.appendChild(div);
   }
   messagesEl.scrollTop = messagesEl.scrollHeight;
-}
-
-function escapeHtml(s) {
-  return String(s)
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;");
 }
 
 async function loadConversation(force = false) {
@@ -233,12 +298,10 @@ async function loadConversation(force = false) {
     `/messages/${encodeURIComponent(
       selectedPeerId
     )}`,
-    {
-      headers: authHeaders(),
-    }
+    { headers: authHeaders() }
   );
-
   if (!res.ok) return;
+
   renderMessages(res.json || []);
 }
 
@@ -247,7 +310,6 @@ sendBtn.onclick = async () => {
     alert("Оберіть контакт або діалог.");
     return;
   }
-
   const text = msgInput.value.trim();
   if (!text) return;
 
@@ -270,22 +332,15 @@ sendBtn.onclick = async () => {
   }
 
   msgInput.value = "";
-
-  // Після відправки:
-  // 1) підвантажити чат
-  // 2) оновити контакти (бо авто-додавання)
-  // 3) оновити діалоги
   await refreshContacts();
   await refreshDialogs();
   await loadConversation(true);
 };
 
-// Enter для відправки
 msgInput.addEventListener("keydown", (e) => {
   if (e.key === "Enter") sendBtn.click();
 });
 
-// Polling: раз на 2 секунди
 setInterval(() => {
   refreshDialogs();
   refreshContacts();
@@ -293,6 +348,6 @@ setInterval(() => {
 }, 2000);
 
 // init
-setMeLine();
+ensureMe();
 refreshContacts();
 refreshDialogs();

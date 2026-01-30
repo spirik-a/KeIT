@@ -15,11 +15,26 @@
   <body>
     <div class="app">
       <aside class="sidebar">
-        <div class="me">
+        <div id="meBox" class="me clickable">
           <div class="me-title">Профіль</div>
-          <div id="meLine" class="me-line">
-            ...
+
+          <div class="meRow">
+            <img
+              id="meAvatar"
+              class="avatar big"
+              src="/frontend/assets/default-avatar.png"
+            />
+            <div>
+              <div id="meLine" class="me-line">
+                ...
+              </div>
+              <div
+                id="meStatus"
+                class="me-status"
+              ></div>
+            </div>
           </div>
+
           <button
             id="logoutBtn"
             class="secondary"
@@ -33,8 +48,8 @@
             Додати контакт
           </div>
           <input
-            id="addUsername"
-            placeholder="Нік (наприклад cheker)"
+            id="addUsernameOrPhone"
+            placeholder="Номер телефону або нік"
           />
           <button id="addBtn">Додати</button>
           <div id="addStatus" class="hint"></div>
