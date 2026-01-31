@@ -1,342 +1,328 @@
 import express from "express";
 import crypto from "crypto";
+import path from "path";
+import fs from "fs";
+import multer from "multer";
+
+import authMiddleware from "../middleware/auth.js";
 import {
   USERS_FILE,
   SESSIONS_FILE,
-  RESETS_FILE,
   readJSON,
   writeJSON,
-} from "../lib/storage.js";
+} from "../storage/db.js";
 
 const router = express.Router();
 
-function normalizePhone(phone) {
-  return String(phone || "").trim();
+/* =========================
+   Helpers
+========================= */
+function nowISO() {
+  return new Date().toISOString();
 }
 
-function normalizeUsername(username) {
-  return String(username || "").trim();
+function hashPasswordSha256(password) {
+  return crypto
+    .createHash("sha256")
+    .update(password, "utf8")
+    .digest("hex");
 }
 
-function validatePassword(p) {
-  if (typeof p !== "string") return false;
-  if (p.length < 8) return false;
-  if (!/[a-z]/.test(p)) return false;
-  if (!/[A-Z]/.test(p)) return false;
-  if (!/[0-9]/.test(p)) return false;
-  if (!/[^A-Za-z0-9]/.test(p)) return false;
-  return true;
+// сумісність: якщо колись буде інший формат, поки що підтримуємо sha256 hex
+function verifyPassword(password, storedHash) {
+  const h = hashPasswordSha256(password);
+  return h === storedHash;
 }
 
-function hashPassword(password) {
-  const salt = crypto
-    .randomBytes(16)
-    .toString("hex");
-  const hash = crypto
-    .scryptSync(password, salt, 64)
-    .toString("hex");
-  return { salt, hash };
+function validatePassword(password) {
+  // 8+ символів, мала, велика, цифра, символ
+  if (typeof password !== "string")
+    return "Пароль має бути рядком";
+  if (password.length < 8)
+    return "Пароль має бути не менше 8 символів";
+  if (!/[a-z]/.test(password))
+    return "Пароль має містити малу літеру";
+  if (!/[A-Z]/.test(password))
+    return "Пароль має містити велику літеру";
+  if (!/[0-9]/.test(password))
+    return "Пароль має містити цифру";
+  if (!/[^A-Za-z0-9]/.test(password))
+    return "Пароль має містити символ";
+  return null;
 }
 
-function verifyPassword(password, salt, hash) {
-  const test = crypto
-    .scryptSync(password, salt, 64)
-    .toString("hex");
-  return crypto.timingSafeEqual(
-    Buffer.from(test, "hex"),
-    Buffer.from(hash, "hex")
-  );
+function publicUser(u) {
+  return {
+    id: u.id,
+    phone: u.phone,
+    username: u.username,
+    name: u.name,
+    role: u.role,
+    balance: u.balance,
+    status: u.status || "",
+    avatarUrl: u.avatarUrl || null,
+  };
 }
 
-function generate6DigitCode() {
-  const n = crypto.randomInt(0, 1000000);
-  return String(n).padStart(6, "0");
-}
+/* =========================
+   Upload setup (avatar)
+========================= */
+const uploadDir = path.resolve(
+  "..",
+  "frontend",
+  "uploads"
+);
+// (ти запускаєш npm start у backend, тому ".." — це корінь KeIT)
+if (!fs.existsSync(uploadDir))
+  fs.mkdirSync(uploadDir, { recursive: true });
 
+const storage = multer.diskStorage({
+  destination: (req, file, cb) =>
+    cb(null, uploadDir),
+  filename: (req, file, cb) => {
+    const ext =
+      path
+        .extname(file.originalname || "")
+        .toLowerCase() || ".png";
+    cb(null, `${req.user.id}${ext}`);
+  },
+});
+
+const upload = multer({ storage });
+
+/* =========================
+   Routes
+========================= */
+
+/**
+ * POST /users/register
+ * body: { phone, name, username, password }
+ */
 router.post("/register", (req, res) => {
-  const phone = normalizePhone(req.body?.phone);
+  const phone = String(
+    req.body?.phone || ""
+  ).trim();
   const name = String(
     req.body?.name || ""
   ).trim();
-  const username = normalizeUsername(
-    req.body?.username
+  const username = String(
+    req.body?.username || ""
+  ).trim();
+  const password = String(
+    req.body?.password || ""
   );
-  const password = req.body?.password;
 
   if (!phone || !name || !username || !password) {
     return res
       .status(400)
-      .json({ error: "Заповніть усі поля" });
+      .json({
+        error:
+          "phone, name, username, password required",
+      });
   }
 
-  if (!/^[a-zA-Z0-9_.]{3,32}$/.test(username)) {
-    return res.status(400).json({
-      error:
-        "Нік: 3-32 символи (латиниця/цифри/._), без пробілів",
-    });
-  }
-
-  if (!validatePassword(password)) {
-    return res.status(400).json({
-      error:
-        "Пароль: мін. 8 символів, великі/малі літери, цифра і спецсимвол",
-    });
-  }
+  const pwdErr = validatePassword(password);
+  if (pwdErr)
+    return res
+      .status(400)
+      .json({ error: pwdErr });
 
   const users = readJSON(USERS_FILE, []);
 
-  if (
-    users.some(
-      (u) =>
-        String(u.phone || "").trim() === phone
-    )
-  ) {
-    return res.status(409).json({
-      error: "Цей телефон вже зареєстровано",
-    });
-  }
-  if (
-    users.some(
-      (u) =>
-        String(u.username || "").toLowerCase() ===
-        username.toLowerCase()
-    )
-  ) {
+  const phoneTaken = users.find(
+    (u) => String(u.phone || "").trim() === phone
+  );
+  if (phoneTaken)
     return res
       .status(409)
-      .json({ error: "Цей нік вже зайнято" });
-  }
+      .json({ error: "User already exists" });
 
-  const { salt, hash } = hashPassword(password);
+  const usernameTaken = users.find(
+    (u) =>
+      (u.username || "").toLowerCase() ===
+      username.toLowerCase()
+  );
+  if (usernameTaken)
+    return res
+      .status(409)
+      .json({ error: "Username already taken" });
 
   const user = {
     id: crypto.randomUUID(),
     phone,
     name,
     username,
+    passwordHash: hashPasswordSha256(password), // ВАЖЛИВО: зберігаємо хеш
     role: "basic",
     balance: 0,
-    passwordSalt: salt,
-    passwordHash: hash,
-    createdAt: new Date().toISOString(),
+    status: "",
+    avatarUrl: null,
+    createdAt: nowISO(),
   };
 
   users.push(user);
   writeJSON(USERS_FILE, users);
 
-  res.status(201).json({
-    id: user.id,
-    phone: user.phone,
-    name: user.name,
-    username: user.username,
-    role: user.role,
-    balance: user.balance,
-    createdAt: user.createdAt,
+  return res.json({
+    ok: true,
+    user: publicUser(user),
   });
 });
 
+/**
+ * POST /users/login
+ * body: { phone, password }
+ * returns { token, user }
+ */
 router.post("/login", (req, res) => {
-  const phone = normalizePhone(req.body?.phone);
-  const password = req.body?.password;
+  const phone = String(
+    req.body?.phone || ""
+  ).trim();
+  const password = String(
+    req.body?.password || ""
+  );
 
-  if (!phone || !password)
-    return res.status(400).json({
-      error: "Вкажіть телефон і пароль",
-    });
+  if (!phone || !password) {
+    return res
+      .status(400)
+      .json({
+        error: "phone and password required",
+      });
+  }
 
   const users = readJSON(USERS_FILE, []);
   const user = users.find(
     (u) => String(u.phone || "").trim() === phone
   );
+
   if (!user)
     return res
       .status(404)
-      .json({ error: "Користувача не знайдено" });
+      .json({ error: "User not found" });
 
-  const ok = verifyPassword(
-    password,
-    user.passwordSalt,
-    user.passwordHash
-  );
-  if (!ok)
+  // сумісність: якщо раптом старі записи мали інше поле
+  const stored =
+    user.passwordHash || user.password || "";
+  if (!verifyPassword(password, stored)) {
     return res
       .status(401)
-      .json({ error: "Невірний пароль" });
+      .json({ error: "Wrong password" });
+  }
+
+  const token = crypto.randomUUID();
 
   const sessions = readJSON(SESSIONS_FILE, []);
-  const token = crypto.randomUUID();
-  const now = new Date();
-
   sessions.push({
     token,
     userId: user.id,
     username: user.username,
-    createdAt: now.toISOString(),
-    createdAtMs: now.getTime(),
+    phone: user.phone,
+    createdAt: nowISO(),
   });
-
   writeJSON(SESSIONS_FILE, sessions);
 
-  res.json({
+  return res.json({
     token,
-    user: {
-      id: user.id,
-      phone: user.phone,
-      name: user.name,
-      username: user.username,
-      role: user.role,
-      balance: user.balance,
-    },
+    user: publicUser(user),
   });
 });
 
-// Відновлення паролю — request
+/**
+ * GET /users/me
+ */
+router.get("/me", authMiddleware, (req, res) => {
+  const users = readJSON(USERS_FILE, []);
+  const me = users.find(
+    (u) => u.id === req.user.id
+  );
+  if (!me)
+    return res
+      .status(404)
+      .json({ error: "User not found" });
+  res.json(publicUser(me));
+});
+
+/**
+ * POST /users/profile
+ * body: { name, username, status }
+ */
 router.post(
-  "/password-reset/request",
+  "/profile",
+  authMiddleware,
   (req, res) => {
-    const phone = normalizePhone(req.body?.phone);
-    if (!phone)
-      return res
-        .status(400)
-        .json({ error: "Вкажіть телефон" });
+    const name = (req.body?.name ?? "")
+      .toString()
+      .trim();
+    const username = (req.body?.username ?? "")
+      .toString()
+      .trim();
+    const status = (
+      req.body?.status ?? ""
+    ).toString();
 
     const users = readJSON(USERS_FILE, []);
-    const user = users.find(
-      (u) =>
-        String(u.phone || "").trim() === phone
+    const me = users.find(
+      (u) => u.id === req.user.id
     );
+    if (!me)
+      return res
+        .status(404)
+        .json({ error: "User not found" });
 
-    // Безпечно: не розкриваємо існування номера
-    if (!user) return res.json({ ok: true });
+    if (username) {
+      const taken = users.find(
+        (u) =>
+          (u.username || "").toLowerCase() ===
+            username.toLowerCase() &&
+          u.id !== me.id
+      );
+      if (taken)
+        return res
+          .status(409)
+          .json({
+            error: "Username already taken",
+          });
+    }
 
-    const resets = readJSON(RESETS_FILE, []);
-    const code = generate6DigitCode();
-    const { salt, hash } = hashPassword(code);
+    if (name) me.name = name;
+    if (username) me.username = username;
+    me.status = status;
 
-    const expiresAt = new Date(
-      Date.now() + 10 * 60 * 1000
-    );
-
-    resets.push({
-      id: crypto.randomUUID(),
-      userId: user.id,
-      phone: user.phone,
-      codeSalt: salt,
-      codeHash: hash,
-      createdAt: new Date().toISOString(),
-      expiresAt: expiresAt.toISOString(),
-      attempts: 0,
-    });
-
-    writeJSON(RESETS_FILE, resets);
-
-    console.log(
-      `[RESET CODE] phone=${phone} code=${code} (valid 10 min)`
-    );
-    res.json({ ok: true, code });
+    writeJSON(USERS_FILE, users);
+    res.json(publicUser(me));
   }
 );
 
-// Відновлення паролю — confirm
+/**
+ * POST /users/avatar
+ * multipart/form-data, field name: avatar
+ */
 router.post(
-  "/password-reset/confirm",
+  "/avatar",
+  authMiddleware,
+  upload.single("avatar"),
   (req, res) => {
-    const phone = normalizePhone(req.body?.phone);
-    const code = String(
-      req.body?.code || ""
-    ).trim();
-    const newPassword = req.body?.newPassword;
-
-    if (!phone || !code || !newPassword) {
-      return res.status(400).json({
-        error:
-          "Вкажіть телефон, код та новий пароль",
-      });
-    }
-
-    if (!validatePassword(newPassword)) {
-      return res.status(400).json({
-        error:
-          "Пароль: мін. 8 символів, великі/малі літери, цифра і спецсимвол",
-      });
-    }
+    if (!req.file)
+      return res
+        .status(400)
+        .json({ error: "No file" });
 
     const users = readJSON(USERS_FILE, []);
-    const user = users.find(
-      (u) =>
-        String(u.phone || "").trim() === phone
+    const me = users.find(
+      (u) => u.id === req.user.id
     );
-    if (!user)
+    if (!me)
       return res
-        .status(400)
-        .json({ error: "Невірні дані" });
+        .status(404)
+        .json({ error: "User not found" });
 
-    let resets = readJSON(RESETS_FILE, []);
-    const now = Date.now();
+    me.avatarUrl = `/frontend/uploads/${req.file.filename}`;
+    writeJSON(USERS_FILE, users);
 
-    const candidates = resets
-      .filter(
-        (r) =>
-          r.userId === user.id &&
-          new Date(r.expiresAt).getTime() > now
-      )
-      .sort(
-        (a, b) =>
-          new Date(b.createdAt).getTime() -
-          new Date(a.createdAt).getTime()
-      );
-
-    const reset = candidates[0];
-    if (!reset)
-      return res.status(400).json({
-        error:
-          "Код прострочений або не запитаний",
-      });
-    if (reset.attempts >= 5)
-      return res.status(400).json({
-        error:
-          "Забагато спроб. Запитайте новий код",
-      });
-
-    const ok = verifyPassword(
-      code,
-      reset.codeSalt,
-      reset.codeHash
-    );
-    if (!ok) {
-      resets = resets.map((r) =>
-        r.id === reset.id
-          ? { ...r, attempts: r.attempts + 1 }
-          : r
-      );
-      writeJSON(RESETS_FILE, resets);
-      return res
-        .status(400)
-        .json({ error: "Невірний код" });
-    }
-
-    const { salt, hash } =
-      hashPassword(newPassword);
-    const updatedUsers = users.map((u) =>
-      u.id === user.id
-        ? {
-            ...u,
-            passwordSalt: salt,
-            passwordHash: hash,
-            passwordUpdatedAt:
-              new Date().toISOString(),
-          }
-        : u
-    );
-    writeJSON(USERS_FILE, updatedUsers);
-
-    // прибираємо reset-записи цього юзера
-    writeJSON(
-      RESETS_FILE,
-      resets.filter((r) => r.userId !== user.id)
-    );
-
-    res.json({ ok: true });
+    res.json({
+      ok: true,
+      avatarUrl: me.avatarUrl,
+    });
   }
 );
 

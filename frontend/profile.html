@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="uk">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Профіль</title>
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1"
+    />
+    <style>
+      body {
+        margin: 0;
+        font-family: Arial;
+        background: #0b1220;
+        color: #e5e7eb;
+      }
+      .wrap {
+        max-width: 420px;
+        margin: 40px auto;
+        background: #0f172a;
+        border: 1px solid #1f2a44;
+        border-radius: 14px;
+        padding: 16px;
+      }
+      h1 {
+        margin: 0 0 14px 0;
+      }
+      img {
+        width: 120px;
+        height: 120px;
+        border-radius: 50%;
+        object-fit: cover;
+        border: 2px solid #223052;
+      }
+      input,
+      textarea,
+      button {
+        width: 100%;
+        padding: 10px;
+        margin-top: 10px;
+        border-radius: 10px;
+        border: 1px solid #223052;
+        background: #0b1220;
+        color: #e5e7eb;
+      }
+      button {
+        background: #2563eb;
+        border: none;
+        font-weight: 700;
+        cursor: pointer;
+      }
+      .hint {
+        font-size: 12px;
+        color: #94a3b8;
+        margin-top: 10px;
+      }
+      .err {
+        color: #fca5a5;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <h1>Мій профіль</h1>
+
+      <div
+        style="
+          display: flex;
+          justify-content: center;
+          margin-bottom: 10px;
+        "
+      >
+        <img
+          id="avatar"
+          src="/frontend/assets/default-avatar.png"
+        />
+      </div>
+
+      <input
+        type="file"
+        id="avatarFile"
+        accept="image/*"
+      />
+
+      <input id="name" placeholder="Імʼя" />
+      <input id="username" placeholder="Нік" />
+      <textarea
+        id="status"
+        placeholder="Статус"
+      ></textarea>
+
+      <button id="saveBtn">Зберегти</button>
+      <button
+        id="backBtn"
+        style="background: #334155"
+      >
+        ← Назад
+      </button>
+
+      <div id="msg" class="hint"></div>
+    </div>
+
+    <script>
+      const token = localStorage.getItem("token");
+      if (!token)
+        location.href = "/frontend/login.html";
+
+      const avatar =
+        document.getElementById("avatar");
+      const avatarFile =
+        document.getElementById("avatarFile");
+      const nameI =
+        document.getElementById("name");
+      const usernameI =
+        document.getElementById("username");
+      const statusI =
+        document.getElementById("status");
+      const msg = document.getElementById("msg");
+
+      function authHeaders(extra = {}) {
+        return {
+          ...extra,
+          Authorization: "Bearer " + token,
+        };
+      }
+
+      function setMsg(t, isErr = false) {
+        msg.innerHTML = isErr
+          ? `<span class="err">${t}</span>`
+          : t;
+      }
+
+      async function loadMe() {
+        const r = await fetch("/users/me", {
+          headers: authHeaders(),
+        });
+        const text = await r.text();
+        let u = null;
+        try {
+          u = JSON.parse(text);
+        } catch {}
+
+        if (!r.ok) {
+          setMsg(
+            u?.error ||
+              "Помилка завантаження профілю",
+            true
+          );
+          return;
+        }
+
+        nameI.value = u.name || "";
+        usernameI.value = u.username || "";
+        statusI.value = u.status || "";
+        avatar.src =
+          u.avatarUrl ||
+          "/frontend/assets/default-avatar.png";
+        localStorage.setItem(
+          "user",
+          JSON.stringify(u)
+        );
+      }
+
+      document.getElementById("saveBtn").onclick =
+        async () => {
+          setMsg("Збереження...");
+
+          const r = await fetch(
+            "/users/profile",
+            {
+              method: "POST",
+              headers: authHeaders({
+                "Content-Type":
+                  "application/json",
+              }),
+              body: JSON.stringify({
+                name: nameI.value,
+                username: usernameI.value,
+                status: statusI.value,
+              }),
+            }
+          );
+
+          const text = await r.text();
+          let u = null;
+          try {
+            u = JSON.parse(text);
+          } catch {}
+
+          if (!r.ok) {
+            setMsg(
+              u?.error || `Помилка (${r.status})`,
+              true
+            );
+            return;
+          }
+
+          localStorage.setItem(
+            "user",
+            JSON.stringify(u)
+          );
+          setMsg("Збережено ✅");
+        };
+
+      avatarFile.onchange = async () => {
+        const f = avatarFile.files[0];
+        if (!f) return;
+
+        setMsg("Завантаження аватару...");
+
+        const fd = new FormData();
+        fd.append("avatar", f);
+
+        const r = await fetch("/users/avatar", {
+          method: "POST",
+          headers: authHeaders(),
+          body: fd,
+        });
+
+        const text = await r.text();
+        let data = null;
+        try {
+          data = JSON.parse(text);
+        } catch {}
+
+        if (!r.ok) {
+          setMsg(
+            data?.error ||
+              `Помилка (${r.status})`,
+            true
+          );
+          return;
+        }
+
+        avatar.src = data.avatarUrl;
+        setMsg("Аватар оновлено ✅");
+
+        // оновити user в localStorage, щоб messenger одразу підхопив
+        await loadMe();
+      };
+
+      document.getElementById("backBtn").onclick =
+        () => {
+          location.href =
+            "/frontend/messenger.html";
+        };
+
+      loadMe();
+    </script>
+  </body>
+</html>

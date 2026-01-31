@@ -30,5 +30,26 @@
     "text": "HI",
     "createdAt": "2026-01-25T15:57:04.735Z",
     "createdAtMs": 1769356624735
+  },
+  {
+    "id": "m_2ffb286a10ffb19c14c8a249",
+    "fromId": "2aa1831f-90e2-4192-86e3-620ce599e6fc",
+    "toId": "b9723b2b-bb94-48c6-b62c-244a4c5778e2",
+    "text": "123",
+    "createdAt": "2026-01-31T16:00:19.017Z"
+  },
+  {
+    "id": "m_3a2e01e4f267a19c14ca1023",
+    "fromId": "2aa1831f-90e2-4192-86e3-620ce599e6fc",
+    "toId": "b9723b2b-bb94-48c6-b62c-244a4c5778e2",
+    "text": "текст новій о 18",
+    "createdAt": "2026-01-31T16:01:52.675Z"
+  },
+  {
+    "id": "m_e760b5e56b2d119c14ca6325",
+    "fromId": "b9723b2b-bb94-48c6-b62c-244a4c5778e2",
+    "toId": "2aa1831f-90e2-4192-86e3-620ce599e6fc",
+    "text": "отвыт hope",
+    "createdAt": "2026-01-31T16:02:13.925Z"
   }
 ]

@@ -5,44 +5,51 @@ import { fileURLToPath } from "url";
 import usersRouter from "./routes/users.js";
 import contactsRouter from "./routes/contacts.js";
 import messagesRouter from "./routes/messages.js";
-import adminRouter from "./routes/admin.js";
 
 const app = express();
-const PORT = 3000;
+app.use(express.json());
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-app.use(express.json());
-
-// Frontend directory: KeIT/frontend
-const frontendPath = path.join(
+// KeIT/frontend
+const frontendPath = path.resolve(
   __dirname,
   "..",
   "..",
   "frontend"
 );
+
 app.use(
   "/frontend",
   express.static(frontendPath)
 );
-
-// API routes
-app.use("/users", usersRouter);
-app.use("/contacts", contactsRouter);
-app.use("/messages", messagesRouter);
-app.use("/admin", adminRouter);
-
 app.get("/", (req, res) =>
   res.send("Server works")
 );
 
-app.listen(PORT, () => {
+app.use("/users", usersRouter);
+app.use("/contacts", contactsRouter);
+app.use("/messages", messagesRouter);
+
+// JSON 404 для API, щоб не прилітав HTML
+app.use((req, res) => {
+  if (
+    req.path.startsWith("/users") ||
+    req.path.startsWith("/contacts") ||
+    req.path.startsWith("/messages")
+  ) {
+    return res
+      .status(404)
+      .json({ error: "Not found" });
+  }
+  res.status(404).send("Not found");
+});
+
+const PORT = 3000;
+app.listen(PORT, "0.0.0.0", () => {
   console.log(
     `Server running on http://localhost:${PORT}`
   );
-  console.log("Frontend path:", frontendPath);
-  console.log(
-    "Admin endpoints: /admin/ping, /admin/users, /admin/set-password"
-  );
+  console.log(`Frontend path: ${frontendPath}`);
 });

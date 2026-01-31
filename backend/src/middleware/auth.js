@@ -1,8 +1,7 @@
 import {
-  USERS_FILE,
   SESSIONS_FILE,
   readJSON,
-} from "../lib/storage.js";
+} from "../storage/db.js";
 
 export default function authMiddleware(
   req,
@@ -12,31 +11,23 @@ export default function authMiddleware(
   const header = req.headers.authorization || "";
   const token = header.startsWith("Bearer ")
     ? header.slice(7).trim()
-    : "";
+    : null;
 
   if (!token)
     return res
       .status(401)
-      .json({ error: "Unauthorized" });
+      .json({ error: "No token" });
 
   const sessions = readJSON(SESSIONS_FILE, []);
-  const session = sessions.find(
-    (s) => s.token === token
+  const s = sessions.find(
+    (x) => x.token === token
   );
-  if (!session)
+
+  if (!s)
     return res
       .status(401)
-      .json({ error: "Invalid session" });
+      .json({ error: "Invalid token" });
 
-  const users = readJSON(USERS_FILE, []);
-  const user = users.find(
-    (u) => u.id === session.userId
-  );
-  if (!user)
-    return res
-      .status(401)
-      .json({ error: "User not found" });
-
-  req.user = user;
+  req.user = { id: s.userId };
   next();
 }

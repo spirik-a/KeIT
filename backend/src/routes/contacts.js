@@ -5,7 +5,7 @@ import {
   CONTACTS_FILE,
   readJSON,
   writeJSON,
-} from "../lib/storage.js";
+} from "../storage/db.js";
 
 const router = express.Router();
 
@@ -17,16 +17,17 @@ function userPublic(u) {
     username: u.username,
     role: u.role,
     balance: u.balance,
+    status: u.status || "",
     avatarUrl: u.avatarUrl || null,
-    status: u.status || null,
   };
 }
 
+// GET /contacts
 router.get("/", authMiddleware, (req, res) => {
   const users = readJSON(USERS_FILE, []);
   const contactsMap = readJSON(CONTACTS_FILE, {});
-  const ids = contactsMap[req.user.id] || [];
 
+  const ids = contactsMap[req.user.id] || [];
   const list = ids
     .map((id) => users.find((u) => u.id === id))
     .filter(Boolean)
@@ -35,6 +36,7 @@ router.get("/", authMiddleware, (req, res) => {
   res.json(list);
 });
 
+// POST /contacts/add  body: { phone } OR { username }
 router.post(
   "/add",
   authMiddleware,
@@ -51,27 +53,29 @@ router.post(
     const username = String(
       req.body?.username || ""
     ).trim();
-    const userId = String(
-      req.body?.userId || ""
-    ).trim();
+
+    if (!phone && !username) {
+      return res
+        .status(400)
+        .json({
+          error: "phone or username required",
+        });
+    }
 
     let contact = null;
 
-    if (userId)
-      contact = users.find(
-        (u) => u.id === userId
-      );
-    else if (phone)
+    if (phone) {
       contact = users.find(
         (u) =>
           String(u.phone || "").trim() === phone
       );
-    else if (username)
+    } else if (username) {
       contact = users.find(
         (u) =>
           (u.username || "").toLowerCase() ===
           username.toLowerCase()
       );
+    }
 
     if (!contact)
       return res
@@ -82,18 +86,15 @@ router.post(
         .status(400)
         .json({ error: "Не можна додати себе" });
 
-    if (!contactsMap[req.user.id])
-      contactsMap[req.user.id] = [];
+    contactsMap[req.user.id] ??= [];
+    contactsMap[contact.id] ??= [];
+
     if (
       !contactsMap[req.user.id].includes(
         contact.id
       )
     )
       contactsMap[req.user.id].push(contact.id);
-
-    // взаємно
-    if (!contactsMap[contact.id])
-      contactsMap[contact.id] = [];
     if (
       !contactsMap[contact.id].includes(
         req.user.id
