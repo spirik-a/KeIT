@@ -12,7 +12,6 @@ app.use(express.json());
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// KeIT/frontend
 const frontendPath = path.resolve(
   __dirname,
   "..",
@@ -32,7 +31,6 @@ app.use("/users", usersRouter);
 app.use("/contacts", contactsRouter);
 app.use("/messages", messagesRouter);
 
-// JSON 404 для API, щоб не прилітав HTML
 app.use((req, res) => {
   if (
     req.path.startsWith("/users") ||

@@ -7,8 +7,9 @@
     "role": "basic",
     "balance": 0,
     "passwordSalt": "395269ebe6290adf89ee262328c0a524",
-    "passwordHash": "c6cac90bbe940fc0c4a106da9a4d1693c4c429778edf520e8742b2f61a119190ebb28b0284c3615e70f79751399683bc3b41e1002c430b70f6a4e54ea53383bb",
-    "createdAt": "2026-01-25T15:26:17.102Z"
+    "passwordHash": "38b00a580418929784b2051f5bf8762c0781adfa021defa72bc97eedc219aaf0",
+    "createdAt": "2026-01-25T15:26:17.102Z",
+    "status": "in wait"
   },
   {
     "id": "b9723b2b-bb94-48c6-b62c-244a4c5778e2",

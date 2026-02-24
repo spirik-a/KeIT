@@ -51,5 +51,33 @@
     "toId": "2aa1831f-90e2-4192-86e3-620ce599e6fc",
     "text": "отвыт hope",
     "createdAt": "2026-01-31T16:02:13.925Z"
+  },
+  {
+    "id": "m_b5fbf15909e3d19c80f226cc",
+    "fromId": "b9723b2b-bb94-48c6-b62c-244a4c5778e2",
+    "toId": "042bf71a-e721-484e-afae-a5cf782826e4",
+    "text": "перевірка",
+    "createdAt": "2026-02-21T16:04:39.244Z"
+  },
+  {
+    "id": "m_f9640c52704dc19c90c791ad",
+    "fromId": "042bf71a-e721-484e-afae-a5cf782826e4",
+    "toId": "b9723b2b-bb94-48c6-b62c-244a4c5778e2",
+    "text": "hey you",
+    "createdAt": "2026-02-24T17:52:04.013Z"
+  },
+  {
+    "id": "m_7aee8b346b96d19c90d71efc",
+    "fromId": "b9723b2b-bb94-48c6-b62c-244a4c5778e2",
+    "toId": "042bf71a-e721-484e-afae-a5cf782826e4",
+    "text": "987",
+    "createdAt": "2026-02-24T18:09:03.228Z"
+  },
+  {
+    "id": "m_800c644dc531819c90d74d94",
+    "fromId": "042bf71a-e721-484e-afae-a5cf782826e4",
+    "toId": "b9723b2b-bb94-48c6-b62c-244a4c5778e2",
+    "text": "hhbb",
+    "createdAt": "2026-02-24T18:09:15.156Z"
   }
 ]
