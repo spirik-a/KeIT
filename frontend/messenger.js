@@ -2,15 +2,26 @@ const token = localStorage.getItem("token");
 let me = JSON.parse(
   localStorage.getItem("user") || "null"
 );
-
 if (!token)
   location.href = "/frontend/login.html";
+
+const STATUS_LABEL = {
+  ready: "Готовий до розмови",
+  busy: "Зайнятий",
+  angry: "Без настрою / сердитий",
+};
 
 const meLine = document.getElementById("meLine");
 const meAvatar =
   document.getElementById("meAvatar");
 const meStatus =
   document.getElementById("meStatus");
+const meStatusDot = document.getElementById(
+  "meStatusDot"
+);
+const meOnlineDot = document.getElementById(
+  "meOnlineDot"
+);
 const meBox = document.getElementById("meBox");
 const logoutBtn =
   document.getElementById("logoutBtn");
@@ -39,7 +50,6 @@ const sendBtn =
   document.getElementById("sendBtn");
 
 let selectedPeerId = null;
-let lastRenderedCount = 0;
 
 function authHeaders(extra = {}) {
   return {
@@ -69,36 +79,38 @@ function esc(s) {
     .replaceAll("<", "&lt;")
     .replaceAll(">", "&gt;");
 }
-
-function fmt(iso) {
-  try {
-    return new Date(iso).toLocaleString("uk-UA");
-  } catch {
-    return iso;
-  }
-}
-
 function avatarUrl(user) {
   return (
     user?.avatarUrl ||
     "/frontend/assets/default-avatar.png"
   );
 }
+function statusKey(user) {
+  return user?.statusKey || "ready";
+}
+function statusText(user) {
+  return (
+    STATUS_LABEL[statusKey(user)] ||
+    STATUS_LABEL.ready
+  );
+}
 
 function setMeUI() {
-  if (!me) {
-    meLine.textContent = "Завантаження...";
-    meStatus.textContent = "";
-    meAvatar.src =
-      "/frontend/assets/default-avatar.png";
-    return;
-  }
-  meLine.textContent = `${me.phone || ""}  •  @${
+  if (!me) return;
+  meLine.textContent = `${me.phone || ""} • @${
     me.username || ""
   }`.trim();
-  meStatus.textContent =
-    me.status || "Статус: (не задано)";
+  meStatus.textContent = `Статус: ${statusText(
+    me
+  )}`;
   meAvatar.src = avatarUrl(me);
+
+  // статус крапка
+  meStatusDot.className = `dot status ${statusKey(
+    me
+  )}`;
+  // online крапка (для себе завжди зелена, бо ти на сторінці)
+  meOnlineDot.className = `dot online`;
 }
 
 logoutBtn.onclick = () => {
@@ -106,21 +118,21 @@ logoutBtn.onclick = () => {
   localStorage.removeItem("user");
   location.href = "/frontend/login.html";
 };
-
 meBox.onclick = () =>
   (location.href = "/frontend/profile.html");
 
+async function ping() {
+  await fetch("/users/ping", {
+    method: "POST",
+    headers: authHeaders(),
+  }).catch(() => {});
+}
+
 async function ensureMe() {
-  setMeUI();
   const res = await apiJson("/users/me", {
     headers: authHeaders(),
   });
-  if (!res.ok) {
-    meLine.textContent = `Помилка профілю: ${
-      res.json?.error || res.status
-    }`;
-    return;
-  }
+  if (!res.ok) return;
   me = res.json;
   localStorage.setItem(
     "user",
@@ -128,6 +140,151 @@ async function ensureMe() {
   );
   setMeUI();
 }
+
+function avatarBlock(u) {
+  const sk = statusKey(u);
+  const onlineClass = u?.isOnline
+    ? "online"
+    : "offline";
+  return `
+    <div class="avatarWrap small">
+      <img class="avatarImg" src="${esc(
+        avatarUrl(u)
+      )}" />
+      <span class="dot status ${esc(sk)}"></span>
+      <span class="dot ${onlineClass}"></span>
+    </div>
+  `;
+}
+
+async function refreshContacts() {
+  const res = await apiJson("/contacts", {
+    headers: authHeaders(),
+  });
+  if (!res.ok) return;
+  const contacts = res.json || [];
+
+  contactsList.innerHTML = "";
+  for (const c of contacts) {
+    const div = document.createElement("div");
+    div.className = "item";
+    if (c.id === selectedPeerId)
+      div.classList.add("active");
+
+    div.innerHTML = `
+      <div class="contactRow">
+        ${avatarBlock(c)}
+        <div>
+          <div class="title">${esc(
+            c.name
+          )} (@${esc(c.username)})</div>
+          <div class="sub">${esc(
+            c.phone || ""
+          )} • ${esc(statusText(c))}${
+      c.isOnline ? " • онлайн" : ""
+    }</div>
+        </div>
+      </div>
+    `;
+
+    div.onclick = () =>
+      selectPeer(
+        c.id,
+        `${c.name} (@${c.username})`
+      );
+    contactsList.appendChild(div);
+  }
+}
+
+async function refreshDialogs() {
+  const res = await apiJson("/messages/inbox", {
+    headers: authHeaders(),
+  });
+  if (!res.ok) return;
+  const dialogs = res.json || [];
+
+  dialogsList.innerHTML = "";
+  for (const d of dialogs) {
+    const div = document.createElement("div");
+    div.className = "item";
+    div.innerHTML = `<div class="title">@${esc(
+      d.peer.username || d.peer.id
+    )}</div><div class="sub">${esc(
+      d.lastMessage?.text || ""
+    )}</div>`;
+    div.onclick = () =>
+      selectPeer(
+        d.peer.id,
+        `@${d.peer.username || d.peer.id}`
+      );
+    dialogsList.appendChild(div);
+  }
+}
+
+function selectPeer(peerId, label) {
+  selectedPeerId = peerId;
+  chatWith.textContent = `Чат з ${label}`;
+  loadConversation();
+  refreshContacts();
+}
+
+async function loadConversation() {
+  if (!selectedPeerId) return;
+  const res = await apiJson(
+    `/messages/${encodeURIComponent(
+      selectedPeerId
+    )}`,
+    { headers: authHeaders() }
+  );
+  if (!res.ok) return;
+  const list = res.json || [];
+
+  messagesEl.innerHTML = "";
+  for (const m of list) {
+    const div = document.createElement("div");
+    const isMe = m.fromId === me?.id;
+    div.className =
+      "msg " + (isMe ? "me" : "other");
+    div.innerHTML = `<div>${esc(
+      m.text
+    )}</div><div class="time">${esc(
+      m.createdAt
+    )}</div>`;
+    messagesEl.appendChild(div);
+  }
+  messagesEl.scrollTop = messagesEl.scrollHeight;
+}
+
+sendBtn.onclick = async () => {
+  if (!selectedPeerId) {
+    alert("Оберіть контакт.");
+    return;
+  }
+  const text = msgInput.value.trim();
+  if (!text) return;
+
+  const res = await apiJson("/messages", {
+    method: "POST",
+    headers: authHeaders({
+      "Content-Type": "application/json",
+    }),
+    body: JSON.stringify({
+      to: selectedPeerId,
+      text,
+    }),
+  });
+
+  if (!res.ok) {
+    alert(
+      res.json?.error || `Помилка (${res.status})`
+    );
+    return;
+  }
+
+  msgInput.value = "";
+  await refreshDialogs();
+  await loadConversation();
+};
 
 addBtn.onclick = async () => {
   addStatus.textContent = "";
@@ -167,175 +324,17 @@ addBtn.onclick = async () => {
   await refreshContacts();
 };
 
-function renderList(
-  container,
-  items,
-  getId,
-  render,
-  onClick
-) {
-  container.innerHTML = "";
-  for (const item of items) {
-    const div = document.createElement("div");
-    div.className = "item";
-    const id = getId(item);
-    if (id === selectedPeerId)
-      div.classList.add("active");
-    div.innerHTML = render(item);
-    div.onclick = () => onClick(item);
-    container.appendChild(div);
-  }
-}
-
-async function refreshContacts() {
-  const res = await apiJson("/contacts", {
-    headers: authHeaders(),
-  });
-  if (!res.ok) return;
-
-  const contacts = res.json || [];
-  renderList(
-    contactsList,
-    contacts,
-    (c) => c.id,
-    (c) => `
-      <div class="contactRow">
-        <img class="avatar" src="${esc(
-          c.avatarUrl ||
-            "/frontend/assets/default-avatar.png"
-        )}" />
-        <div>
-          <div class="title">${esc(
-            c.name
-          )} (@${esc(c.username)})</div>
-          <div class="sub">${esc(
-            c.phone || ""
-          )}</div>
-        </div>
-      </div>
-    `,
-    (c) =>
-      selectPeer(
-        c.id,
-        `${c.name} (@${c.username})`
-      )
-  );
-}
-
-async function refreshDialogs() {
-  const res = await apiJson("/messages/inbox", {
-    headers: authHeaders(),
-  });
-  if (!res.ok) return;
-
-  const dialogs = res.json || [];
-  renderList(
-    dialogsList,
-    dialogs,
-    (d) => d.peer.id,
-    (d) => {
-      const title = d.peer.username
-        ? `@${d.peer.username}`
-        : d.peer.id;
-      const last = d.lastMessage?.text || "";
-      return `<div class="title">${esc(
-        title
-      )}</div><div class="sub">${esc(
-        last
-      )}</div>`;
-    },
-    (d) => {
-      const label = d.peer.username
-        ? `@${d.peer.username}`
-        : d.peer.id;
-      selectPeer(d.peer.id, label);
-    }
-  );
-}
-
-function selectPeer(peerId, label) {
-  selectedPeerId = peerId;
-  chatWith.textContent = `Чат з ${label}`;
-  lastRenderedCount = 0;
-  messagesEl.innerHTML = "";
-  refreshContacts();
-  refreshDialogs();
-  loadConversation();
-}
-
-function renderMessages(list) {
-  if (list.length === lastRenderedCount) return;
-  lastRenderedCount = list.length;
-
-  messagesEl.innerHTML = "";
-  for (const m of list) {
-    const div = document.createElement("div");
-    const isMe = m.fromId === me?.id;
-    div.className =
-      "msg " + (isMe ? "me" : "other");
-    div.innerHTML = `<div>${esc(
-      m.text
-    )}</div><div class="time">${esc(
-      fmt(m.createdAt)
-    )}</div>`;
-    messagesEl.appendChild(div);
-  }
-  messagesEl.scrollTop = messagesEl.scrollHeight;
-}
-
-async function loadConversation() {
-  if (!selectedPeerId) return;
-  const res = await apiJson(
-    `/messages/${encodeURIComponent(
-      selectedPeerId
-    )}`,
-    { headers: authHeaders() }
-  );
-  if (!res.ok) return;
-  renderMessages(res.json || []);
-}
-
-sendBtn.onclick = async () => {
-  if (!selectedPeerId) {
-    alert("Оберіть контакт.");
-    return;
-  }
-  const text = msgInput.value.trim();
-  if (!text) return;
-
-  const res = await apiJson("/messages", {
-    method: "POST",
-    headers: authHeaders({
-      "Content-Type": "application/json",
-    }),
-    body: JSON.stringify({
-      to: selectedPeerId,
-      text,
-    }),
-  });
-
-  if (!res.ok) {
-    alert(
-      res.json?.error || `Помилка (${res.status})`
-    );
-    return;
-  }
-
-  msgInput.value = "";
+(async function init() {
+  await ensureMe();
+  await refreshContacts();
   await refreshDialogs();
-  await loadConversation();
-};
+  await ping();
 
-msgInput.addEventListener("keydown", (e) => {
-  if (e.key === "Enter") sendBtn.click();
-});
-
-setInterval(() => {
-  refreshDialogs();
-  loadConversation();
-}, 2000);
-
-// init
-ensureMe();
-refreshContacts();
-refreshDialogs();
+  setInterval(async () => {
+    await ping();
+    await ensureMe();
+    await refreshContacts();
+    await refreshDialogs();
+    await loadConversation();
+  }, 15000);
+})();

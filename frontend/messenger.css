@@ -7,7 +7,6 @@ body {
   background: #0b1220;
   color: #e5e7eb;
 }
-
 .app {
   display: flex;
   height: 100vh;
@@ -63,7 +62,6 @@ body {
   color: #94a3b8;
   margin-top: 6px;
 }
-
 .meRow {
   display: flex;
   gap: 10px;
@@ -80,7 +78,6 @@ button {
   background: #0b1220;
   color: #e5e7eb;
 }
-
 button {
   background: #2563eb;
   border: none;
@@ -122,22 +119,63 @@ button.secondary {
   margin-top: 4px;
 }
 
-.contactRow {
-  display: flex;
-  gap: 10px;
-  align-items: center;
+/* ===== Avatar + indicators ===== */
+.avatarWrap {
+  position: relative;
+  width: 44px;
+  height: 44px;
+  flex: 0 0 auto;
 }
-
-.avatar {
+.avatarWrap.small {
   width: 34px;
   height: 34px;
+}
+
+.avatarImg {
+  width: 100%;
+  height: 100%;
   border-radius: 50%;
   border: 1px solid #223052;
   object-fit: cover;
 }
-.avatar.big {
-  width: 44px;
-  height: 44px;
+
+/* base dot */
+.dot {
+  position: absolute;
+  bottom: -2px;
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  border: 2px solid #0b1220;
+}
+
+/* статус (лівіше) */
+.dot.status {
+  right: 12px;
+}
+.dot.status.ready {
+  background: #3b82f6;
+} /* синій */
+.dot.status.busy {
+  background: #f59e0b;
+} /* жовтий */
+.dot.status.angry {
+  background: #ef4444;
+} /* червоний */
+
+/* онлайн (правіше) */
+.dot.online {
+  right: 0px;
+  background: #22c55e;
+}
+.dot.offline {
+  display: none;
+}
+
+.contactRow {
+  display: flex;
+  gap: 10px;
+  align-items: center;
 }
 
 /* Chat */
@@ -160,7 +198,6 @@ button.secondary {
   flex-direction: column;
   gap: 8px;
 }
-
 .msg {
   max-width: 70%;
   padding: 10px;

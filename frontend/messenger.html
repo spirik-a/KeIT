@@ -2,7 +2,7 @@
 <html lang="uk">
   <head>
     <meta charset="UTF-8" />
-    <title>KeIT Messenger</title>
+    <title>Месенджер</title>
     <meta
       name="viewport"
       content="width=device-width, initial-scale=1"
@@ -14,16 +14,27 @@
   </head>
   <body>
     <div class="app">
-      <aside class="sidebar">
+      <div class="sidebar">
         <div id="meBox" class="me clickable">
           <div class="me-title">Профіль</div>
-
           <div class="meRow">
-            <img
-              id="meAvatar"
-              class="avatar big"
-              src="/frontend/assets/default-avatar.png"
-            />
+            <div class="avatarWrap">
+              <img
+                id="meAvatar"
+                class="avatarImg"
+                src="/frontend/assets/default-avatar.png"
+              />
+              <!-- кружечки малює CSS, а класи дає JS -->
+              <span
+                id="meStatusDot"
+                class="dot status ready"
+              ></span>
+              <span
+                id="meOnlineDot"
+                class="dot offline"
+              ></span>
+            </div>
+
             <div>
               <div id="meLine" class="me-line">
                 ...
@@ -34,7 +45,6 @@
               ></div>
             </div>
           </div>
-
           <button
             id="logoutBtn"
             class="secondary"
@@ -45,11 +55,11 @@
 
         <div class="addContact">
           <div class="blockTitle">
-            Додати контакт
+            Додати контакт (номер або нік)
           </div>
           <input
             id="addUsernameOrPhone"
-            placeholder="Номер телефону або нік"
+            placeholder="+380... або spirik"
           />
           <button id="addBtn">Додати</button>
           <div id="addStatus" class="hint"></div>
@@ -70,13 +80,11 @@
             class="list"
           ></div>
         </div>
-      </aside>
+      </div>
 
-      <main class="chat">
-        <div class="chatHeader">
-          <div id="chatWith">
-            Оберіть контакт або діалог
-          </div>
+      <div class="chat">
+        <div id="chatWith" class="chatHeader">
+          Оберіть контакт
         </div>
 
         <div id="messages" class="messages"></div>
@@ -84,11 +92,11 @@
         <div class="composer">
           <input
             id="msgInput"
-            placeholder="Напишіть повідомлення..."
+            placeholder="Повідомлення..."
           />
           <button id="sendBtn">Надіслати</button>
         </div>
-      </main>
+      </div>
     </div>
 
     <script src="/frontend/messenger.js"></script>

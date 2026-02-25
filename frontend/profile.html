@@ -33,7 +33,7 @@
         border: 2px solid #223052;
       }
       input,
-      textarea,
+      select,
       button {
         width: 100%;
         padding: 10px;
@@ -84,10 +84,16 @@
 
       <input id="name" placeholder="Імʼя" />
       <input id="username" placeholder="Нік" />
-      <textarea
-        id="status"
-        placeholder="Статус"
-      ></textarea>
+
+      <select id="statusKey">
+        <option value="ready">
+          Готовий до розмови
+        </option>
+        <option value="busy">Зайнятий</option>
+        <option value="angry">
+          Без настрою / сердитий
+        </option>
+      </select>
 
       <button id="saveBtn">Зберегти</button>
       <button
@@ -113,8 +119,8 @@
         document.getElementById("name");
       const usernameI =
         document.getElementById("username");
-      const statusI =
-        document.getElementById("status");
+      const statusSel =
+        document.getElementById("statusKey");
       const msg = document.getElementById("msg");
 
       function authHeaders(extra = {}) {
@@ -123,9 +129,8 @@
           Authorization: "Bearer " + token,
         };
       }
-
-      function setMsg(t, isErr = false) {
-        msg.innerHTML = isErr
+      function setMsg(t, err = false) {
+        msg.innerHTML = err
           ? `<span class="err">${t}</span>`
           : t;
       }
@@ -139,11 +144,9 @@
         try {
           u = JSON.parse(text);
         } catch {}
-
         if (!r.ok) {
           setMsg(
-            u?.error ||
-              "Помилка завантаження профілю",
+            u?.error || "Помилка профілю",
             true
           );
           return;
@@ -151,7 +154,7 @@
 
         nameI.value = u.name || "";
         usernameI.value = u.username || "";
-        statusI.value = u.status || "";
+        statusSel.value = u.statusKey || "ready";
         avatar.src =
           u.avatarUrl ||
           "/frontend/assets/default-avatar.png";
@@ -164,7 +167,6 @@
       document.getElementById("saveBtn").onclick =
         async () => {
           setMsg("Збереження...");
-
           const r = await fetch(
             "/users/profile",
             {
@@ -176,7 +178,7 @@
               body: JSON.stringify({
                 name: nameI.value,
                 username: usernameI.value,
-                status: statusI.value,
+                statusKey: statusSel.value,
               }),
             }
           );
@@ -186,7 +188,6 @@
           try {
             u = JSON.parse(text);
           } catch {}
-
           if (!r.ok) {
             setMsg(
               u?.error || `Помилка (${r.status})`,
@@ -207,7 +208,6 @@
         if (!f) return;
 
         setMsg("Завантаження аватару...");
-
         const fd = new FormData();
         fd.append("avatar", f);
 
@@ -216,13 +216,11 @@
           headers: authHeaders(),
           body: fd,
         });
-
         const text = await r.text();
         let data = null;
         try {
           data = JSON.parse(text);
         } catch {}
-
         if (!r.ok) {
           setMsg(
             data?.error ||
@@ -234,16 +232,13 @@
 
         avatar.src = data.avatarUrl;
         setMsg("Аватар оновлено ✅");
-
-        // оновити user в localStorage, щоб messenger одразу підхопив
         await loadMe();
       };
 
       document.getElementById("backBtn").onclick =
-        () => {
-          location.href =
-            "/frontend/messenger.html";
-        };
+        () =>
+          (location.href =
+            "/frontend/messenger.html");
 
       loadMe();
     </script>

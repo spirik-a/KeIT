@@ -9,7 +9,8 @@
     "passwordSalt": "395269ebe6290adf89ee262328c0a524",
     "passwordHash": "38b00a580418929784b2051f5bf8762c0781adfa021defa72bc97eedc219aaf0",
     "createdAt": "2026-01-25T15:26:17.102Z",
-    "status": "in wait"
+    "status": "in wait",
+    "statusKey": "angry"
   },
   {
     "id": "b9723b2b-bb94-48c6-b62c-244a4c5778e2",
@@ -21,7 +22,8 @@
     "balance": 0,
     "status": "",
     "avatarUrl": "/frontend/uploads/b9723b2b-bb94-48c6-b62c-244a4c5778e2.jpg",
-    "createdAt": "2026-01-31T10:14:19.428Z"
+    "createdAt": "2026-01-31T10:14:19.428Z",
+    "statusKey": "angry"
   },
   {
     "id": "2aa1831f-90e2-4192-86e3-620ce599e6fc",
