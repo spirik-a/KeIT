@@ -81,7 +81,6 @@
         id="avatarFile"
         accept="image/*"
       />
-
       <input id="name" placeholder="Імʼя" />
       <input id="username" placeholder="Нік" />
 
@@ -100,7 +99,7 @@
         id="backBtn"
         style="background: #334155"
       >
-        ← Назад
+        ← Назад до месенджера
       </button>
 
       <div id="msg" class="hint"></div>
@@ -236,9 +235,10 @@
       };
 
       document.getElementById("backBtn").onclick =
-        () =>
-          (location.href =
-            "/frontend/messenger.html");
+        () => {
+          location.href =
+            "/frontend/messenger.html";
+        };
 
       loadMe();
     </script>

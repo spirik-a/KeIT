@@ -23,7 +23,7 @@
     "status": "",
     "avatarUrl": "/frontend/uploads/b9723b2b-bb94-48c6-b62c-244a4c5778e2.jpg",
     "createdAt": "2026-01-31T10:14:19.428Z",
-    "statusKey": "angry"
+    "statusKey": "ready"
   },
   {
     "id": "2aa1831f-90e2-4192-86e3-620ce599e6fc",
@@ -35,6 +35,7 @@
     "balance": 0,
     "status": "",
     "avatarUrl": "/frontend/uploads/2aa1831f-90e2-4192-86e3-620ce599e6fc.jpg",
-    "createdAt": "2026-01-31T10:18:12.027Z"
+    "createdAt": "2026-01-31T10:18:12.027Z",
+    "statusKey": "ready"
   }
 ]
